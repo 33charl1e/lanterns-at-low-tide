@@ -19,11 +19,11 @@ public:
 
 private:
     enum class EScreen : uint8 { Dispatch, Play, Workshop };
-    enum class ETool : uint8 { Floor, Wall, Socket, Relay, Gate, Battery, Robot };
+    enum class ETool : uint8 { Floor, Wall, Socket, Relay, Gate, Water, Mirror, Battery, Robot };
     enum class EAction : uint8
     {
         Campaign, Custom, Workshop, Back, Undo, Reset, Advance, Tool, Slot,
-        Save, Open, Clear, Test, Width, Height
+        Save, Open, Clear, Test, Width, Height, Exchange
     };
 
     struct FButton
@@ -45,7 +45,7 @@ private:
     bool bStrokeChanged = false;
     bool bFrameReady = false;
     bool Slots[3] = {};
-    bool Cleared[5] = {};
+    TSet<int32> Cleared;
     ETool Tool = ETool::Wall;
     FString Notice;
     bool bError = false;
@@ -59,9 +59,12 @@ private:
     FIntPoint Facing = { 0, 1 };
     FIntPoint PrevRobot = { -1, -1 };
     FIntPoint MovedBattery = { -1, -1 };
+    FIntPoint BatteryTravel = FIntPoint::ZeroValue;
     double MoveTime = 0;
+    double ExchangeTime = -100;
 
     static FIntPoint DirectionForInput(FKey Key);
+    void RegisterClear();
     void DrawDispatch();
     void DrawPlay();
     void DrawWorkshop();
@@ -74,6 +77,7 @@ private:
     void Rect(float X, float Y, float W, float H, FLinearColor Color);
     void Frame(float X, float Y, float W, float H, FLinearColor Color, float Width = 1.f);
     void Label(const FString& Text, float X, float Y, float Height, FLinearColor Color, bool bHeading = false);
+    void Paragraph(const FString& Value, float X, float Y, float W, float Height, FLinearColor Color);
     void Button(const FString& Text, float X, float Y, float W, float H, EAction Action,
         int32 Value = 0, bool bAccent = false, bool bEnabled = true);
     void Perform(EAction Action, int32 Value = 0);

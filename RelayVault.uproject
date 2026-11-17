@@ -2,7 +2,7 @@
   "FileVersion": 3,
   "EngineAssociation": "5.5",
   "Category": "Games",
-  "Description": "A circuit-powered Sokoban game and grid level editor.",
+  "Description": "An autumn ferry tale with skipping lanterns, tide mirrors, and a grid level editor.",
   "Plugins": [ { "Name": "ProceduralMeshComponent", "Enabled": true } ],
   "Modules": [
     { "Name": "RelayVault", "Type": "Runtime", "LoadingPhase": "Default" }

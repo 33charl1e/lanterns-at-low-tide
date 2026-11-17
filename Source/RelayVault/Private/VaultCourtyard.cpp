@@ -156,7 +156,7 @@ void AVaultCourtyard::Hide()
 
 void AVaultCourtyard::BuildBoard(const FVaultLevel& Level, int32 Sector)
 {
-    FMesh Stone, Glow, Power;
+    FMesh Stone, Glow, Power, Channel, Flash;
     FRandomStream Random(503 + Sector * 17);
     const FLinearColor Slabs[] = {
         Color(0xc8b894), Color(0xbba985), Color(0xb6a98d), Color(0xc6bda3),
@@ -173,6 +173,12 @@ void AVaultCourtyard::BuildBoard(const FVaultLevel& Level, int32 Sector)
             const FVector At = Grid(Position);
             const EVaultTile Tile = Level.TileAt(Position);
             const FLinearColor Tint = Slabs[Random.RandRange(0, 6)];
+            if (Tile == EVaultTile::Water)
+            {
+                Channel.Quad(At + FVector(-50,-50,-3), At + FVector(50,-50,-3),
+                    At + FVector(50,50,-3), At + FVector(-50,50,-3), FLinearColor::White);
+                continue;
+            }
             Stone.Box(At - FVector(0,0,9), {99.6,99.6,19}, 5, Tint);
             if (Tile == EVaultTile::Wall)
             {
@@ -186,6 +192,14 @@ void AVaultCourtyard::BuildBoard(const FVaultLevel& Level, int32 Sector)
             {
                 EtchedPlate(Stone, Glow, At, Gold, false);
                 Power.Ring(At + FVector(0,0,8.5), 36, 41, 4, Cyan, .10f);
+            }
+            else if (Tile == EVaultTile::Mirror)
+            {
+                Stone.Beam(At, At + FVector(0,0,5), 42, 39, Color(0x838ba4), 12);
+                Stone.Beam(At + FVector(0,0,5), At + FVector(0,0,6.5), 33, 32, Color(0x403d66), 12);
+                Glow.Ring(At + FVector(0,0,6.2), 35, 38, 12, Color(0xb69aff), .12f);
+                Glow.Ring(At + FVector(0,0,6.8), 16, 18, 6, Color(0xdec6ff));
+                Flash.Ring(At + FVector(0,0,9), 39, 46, 12, Color(0xf2d1ff), .10f);
             }
             else if (Tile == EVaultTile::Gate)
             {
@@ -223,6 +237,9 @@ void AVaultCourtyard::BuildBoard(const FVaultLevel& Level, int32 Sector)
     }
     Stone.Apply(*Terrain, 0, StoneMaterial);
     Glow.Apply(*Terrain, 1, RuneMaterial);
+    Channel.Apply(*Terrain, 2, WaterMaterial);
+    Flash.Apply(*Terrain, 3, RuneMaterial);
+    Terrain->SetMeshSectionVisible(3, false);
     Power.Apply(*LiveRelays, 0, RuneMaterial);
 }
 
@@ -299,8 +316,8 @@ void AVaultCourtyard::BuildWalker()
     Glow.Apply(*Walker, 1, RuneMaterial);
 }
 
-void AVaultCourtyard::Present(const FVaultLevel& Level, const FVaultState& State, FVector2D Motion,
-    FIntPoint MovingBattery, FIntPoint Facing, float Step, FVector2D Viewport,
+void AVaultCourtyard::Present(const FVaultLevel& Level, const FVaultState& State, FVector2D Motion, FVector2D BatteryMotion,
+    FIntPoint MovingBattery, FIntPoint Facing, float Step, bool bMirrorFlash, FVector2D Viewport,
     FVector2D BoardCenter, float UiScale, bool bTitle)
 {
     if (!Camera)
@@ -313,6 +330,13 @@ void AVaultCourtyard::Present(const FVaultLevel& Level, const FVaultState& State
     const float Hop = FMath::Sin(Step * UE_PI) * 3.5f;
     Walker->SetRelativeLocation(Grid(State.Player) - Shift + FVector(0,0,Hop));
     Walker->SetRelativeRotation(FRotator(0, FMath::RadiansToDegrees(FMath::Atan2(static_cast<float>(Facing.Y), static_cast<float>(Facing.X))), 0));
+    if (Terrain->IsMeshSectionVisible(3) != bMirrorFlash)
+    {
+        Terrain->SetMeshSectionVisible(3, bMirrorFlash);
+    }
+    const FVector CrateShift(BatteryMotion.X * Cell, BatteryMotion.Y * Cell, 0);
+    const float CrateHop = BatteryMotion.SizeSquared() > Motion.SizeSquared() + .01f
+        ? FMath::Sin(Step * UE_PI) * 20.f : 0.f;
     int32 Index = 0;
     bool bPowered = false;
     for (FIntPoint Battery : State.Batteries)
@@ -320,7 +344,7 @@ void AVaultCourtyard::Present(const FVaultLevel& Level, const FVaultState& State
         const EVaultTile Tile = Level.TileAt(Battery);
         const bool bCharged = Tile == EVaultTile::Socket;
         UProceduralMeshComponent& Mesh = *Batteries[Index++];
-        Mesh.SetRelativeLocation(Grid(Battery) - (Battery == MovingBattery ? Shift : FVector::ZeroVector));
+        Mesh.SetRelativeLocation(Grid(Battery) + (Battery == MovingBattery ? FVector(0,0,CrateHop) - CrateShift : FVector::ZeroVector));
         if (Mesh.IsMeshSectionVisible(2) != bCharged)
         {
             Mesh.SetMeshSectionVisible(1, !bCharged);

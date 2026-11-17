@@ -49,7 +49,7 @@ void AVaultHUD::BeginPlay()
     Draft = FVaultLevel::Blank({ 10, 8 });
     RefreshSlots();
     Courtyard = GetWorld()->SpawnActor<AVaultCourtyard>();
-    Courtyard->Build(FVaultLevel::Campaign()[2], 0);
+    Courtyard->Build(FVaultLevel::Campaign().Last(), 0);
 }
 
 void AVaultHUD::RefreshSlots()
@@ -101,7 +101,7 @@ void AVaultHUD::DrawHUD()
     Rect(57, 56, 5, 16, Background);
     Rect(65, 56, 8, 5, Background);
     Rect(65, 67, 8, 5, Background);
-    Label(TEXT("RELAY VAULT"), 92, 47, 30, Text, true);
+    Label(TEXT("LANTERNS AT LOW TIDE"), 92, 47, 30, Text, true);
     Rect(50, 101, 1180, 1, Stroke);
     Rect(50, 725, 1180, 1, Stroke);
 
@@ -119,17 +119,20 @@ void AVaultHUD::DrawDispatch()
     const TArray<FVaultLevel>& Levels = FVaultLevel::Campaign();
     Rect(52, 127, 665, 128, FLinearColor(Background.R, Background.G, Background.B, .90f));
     Rect(52, 127, 3, 128, Mint);
-    Label(TEXT("The Amber Court"), 73, 139, 51, Text, true);
-    Label(TEXT("Carry the lantern cores. Wake the sleeping gates."), 75, 210, 23, Muted);
+    const bool bEnding = Cleared.Contains(Levels.Num() - 1);
+    Label(bEnding ? TEXT("Home Again") : TEXT("The Empty Ferry"), 73, 139, 51, Text, true);
+    Paragraph(bEnding ? TEXT("The far shore answered with a bell. Then a light appeared on the water.")
+        : TEXT("Mara's father left his lamp. The ferry never returned. Relight the shore beacons to call it home."),
+        75, 200, 617, 20, Muted);
     Rect(737, 117, 492, 592, Panel);
     Frame(737, 117, 492, 592, Stroke);
 
-    Label(TEXT("CAMPAIGN"), 759, 136, 19, Mint);
+    Label(TEXT("MARA'S JOURNEY"), 759, 136, 19, Mint);
     for (int32 Index = 0; Index < Levels.Num(); ++Index)
     {
         const FString Row = FString::Printf(TEXT("%02d    %s%s"), Index + 1, *Levels[Index].Title,
-            Cleared[Index] ? TEXT("   /   Clear") : TEXT(""));
-        Button(Row, 759, 177 + Index * 54, 469, 46, EAction::Campaign, Index, Index == 0);
+            Cleared.Contains(Index) ? TEXT("   /   Clear") : TEXT(""));
+        Button(Row, 759, 174 + Index * 40, 469, 36, EAction::Campaign, Index, Index == 0);
     }
 
     Label(TEXT("WORKSHOP"), 759, 473, 19, Mint);
@@ -150,17 +153,20 @@ void AVaultHUD::DrawPlay()
     const bool bComplete = Board.IsComplete();
     const bool bHasRelay = Level.Tiles.Contains(EVaultTile::Relay);
     const bool bPowered = Board.IsPowered();
+    const bool bHasMirrors = Level.Tiles.Contains(EVaultTile::Mirror);
+    const bool bHasWater = Level.Tiles.Contains(EVaultTile::Water);
+    const bool bEnding = Stage == FVaultLevel::Campaign().Num() - 1;
 
     Rect(824, 132, 405, 577, Panel);
     Frame(824, 132, 405, 577, Stroke);
     const FString Mode = bTesting ? TEXT("WORKSHOP PLAYTEST")
-        : (Stage == INDEX_NONE ? TEXT("CUSTOM LEVEL") : FString::Printf(TEXT("SECTOR  %02d / %02d"),
+        : (Stage == INDEX_NONE ? TEXT("CUSTOM LEVEL") : FString::Printf(TEXT("CHAPTER  %02d / %02d"),
             Stage + 1, FVaultLevel::Campaign().Num()));
     Label(Mode, 849, 156, 17, Mint);
     Label(Level.Title, 849, 191, 35, Text, true);
     Rect(849, 254, 355, 1, Stroke);
 
-    Label(TEXT("CHARGED"), 849, 277, 15, Muted);
+    Label(TEXT("BEACONS"), 849, 277, 15, Muted);
     Label(TEXT("MOVES"), 982, 277, 15, Muted);
     Label(TEXT("PUSHES"), 1097, 277, 15, Muted);
     Label(FString::Printf(TEXT("%d / %d"), Board.ChargedCount(), State.Batteries.Num()),
@@ -171,38 +177,38 @@ void AVaultHUD::DrawPlay()
 
     if (bComplete)
     {
-        Label(TEXT("Sector clear"), 849, 398, 39, Mint, true);
-        Label(TEXT("Every core is seated."), 849, 456, 20, Text);
+        Label(bEnding ? TEXT("The ferry answers") : TEXT("Beacon lit"), 849, 390, 35, Mint, true);
+        Paragraph(bEnding ? TEXT("A bell rings across the water. A lantern swings at the prow.")
+            : TEXT("A new light marks the way home."), 849, 447, 355, 19, Text);
         const bool bHasNext = Stage != INDEX_NONE && FVaultLevel::Campaign().IsValidIndex(Stage + 1);
-        Button(bTesting ? TEXT("Return to editor   [Enter]") : (bHasNext ? TEXT("Next sector   [Enter]")
+        Button(bTesting ? TEXT("Return to editor   [Enter]") : (bHasNext ? TEXT("Next chapter   [Enter]")
             : TEXT("Return to dispatch   [Enter]")), 849, 507, 355, 47, EAction::Advance, 0, true);
     }
     else
     {
-        Rect(849, 380, 355, 41, BoardBack);
-        Rect(863, 395, 10, 10, bHasRelay ? (bPowered ? Mint : Amber) : Ocean);
-        Label(bHasRelay ? (bPowered ? TEXT("RELAY ACTIVE") : TEXT("RELAY DORMANT")) : TEXT("COURT OF ARRIVAL"),
-            886, 391, 17, bHasRelay && bPowered ? Mint : Text);
-        FString First = Level.Hint;
-        FString Second;
-        if (First.Len() > 39)
+        Rect(849, 376, 355, 40, BoardBack);
+        Rect(862, 390, 10, 10, bHasRelay ? (bPowered ? Mint : Amber) : Ocean);
+        Label(bHasRelay ? (bPowered ? TEXT("GATE HELD") : TEXT("GATE SHUT"))
+            : (bHasMirrors ? TEXT("TIDE MIRRORS") : (bHasWater ? TEXT("TIDAL CHANNEL") : TEXT("FERRY LANDING"))),
+            881, 387, 17, bHasRelay && bPowered ? Mint : Text);
+        if (bHasMirrors)
         {
-            int32 Split = 39;
-            while (Split > 0 && First[Split] != TEXT(' ')) { --Split; }
-            if (Split > 0)
-            {
-                Second = First.Mid(Split + 1);
-                First.LeftInline(Split);
-            }
+            Button(TEXT("Exchange [Q]"), 1028, 377, 175, 38, EAction::Exchange, 0,
+                Board.CanExchange(), Board.CanExchange());
         }
-        Label(First, 849, 449, 19, Muted);
-        Label(Second, 849, 477, 19, Muted);
+        Paragraph(Level.Hint, 849, 428, 355, 18, Text);
+        if (!Level.Journal.IsEmpty())
+        {
+            Label(TEXT("FERRY LOG"), 849, 500, 13, Mint);
+            Paragraph(Level.Journal, 849, 521, 355, 17, Muted);
+        }
     }
     Button(TEXT("Undo   [Z]"), 849, 574, 171, 42, EAction::Undo, 0, false, State.Moves > 0);
     Button(TEXT("Restart   [R]"), 1031, 574, 173, 42, EAction::Reset);
     Button(bTesting ? TEXT("Back to editor   [Esc]") : TEXT("Back to dispatch   [Esc]"),
         849, 638, 355, 43, EAction::Back);
-    Label(TEXT("WASD / Arrows   Move"), 52, 746, 18, Muted);
+    Label(bHasMirrors ? TEXT("WASD / Arrows   Move      Q   Exchange at a tide mirror")
+        : TEXT("WASD / Arrows   Move"), 52, 746, 18, Muted);
 }
 
 void AVaultHUD::DrawWorkshop()
@@ -216,13 +222,13 @@ void AVaultHUD::DrawWorkshop()
     Label(TEXT("Level workshop"), 849, 150, 37, Text, true);
 
     const TCHAR* Names[] = { TEXT("Floor"), TEXT("Wall"), TEXT("Socket"), TEXT("Relay"),
-        TEXT("Gate"), TEXT("Core"), TEXT("Traveler") };
+        TEXT("Gate"), TEXT("Water"), TEXT("Mirror"), TEXT("Lantern"), TEXT("Mara") };
     for (int32 Index = 0; Index < UE_ARRAY_COUNT(Names); ++Index)
     {
-        Button(Names[Index], 849 + (Index % 2) * 180, 212 + (Index / 2) * 39, 171, 33,
+        Button(Names[Index], 849 + (Index % 2) * 180, 197 + (Index / 2) * 35, 171, 31,
             EAction::Tool, Index, static_cast<int32>(Tool) == Index);
     }
-    Button(TEXT("Clear grid"), 1029, 329, 171, 33, EAction::Clear);
+    Button(TEXT("Clear grid"), 1029, 337, 171, 31, EAction::Clear);
     Rect(849, 376, 351, 1, Stroke);
 
     const auto Dimension = [this](int32 X, const TCHAR* Name, int32 Size, EAction Action)
@@ -254,17 +260,22 @@ void AVaultHUD::PresentCourtyard()
     const FVector2D Viewport(Canvas->SizeX, Canvas->SizeY);
     if (Screen == EScreen::Dispatch)
     {
-        const FVaultLevel& Preview = FVaultLevel::Campaign()[2];
-        const FVaultState State{ {3, 3}, { {2, 2}, {4, 2} } };
-        Courtyard->Present(Preview, State, FVector2D::ZeroVector, NoCell, {0, 1}, 1.f,
+        const FVaultLevel& Preview = FVaultLevel::Campaign().Last();
+        const FVaultState State{ Preview.Start, Preview.Batteries };
+        Courtyard->Present(Preview, State, FVector2D::ZeroVector, FVector2D::ZeroVector, NoCell, {0, 1}, 1.f, false,
             Viewport, Origin + FVector2D(386, 486) * Scale, Scale, true);
         return;
     }
 
+    const bool bSkipping = BatteryTravel.SizeSquared() > 1;
+    const float Duration = bSkipping ? .26f : .14f;
+    const double Now = GetWorld()->GetRealTimeSeconds();
     const float Progress = PrevRobot == NoCell ? 1.f
-        : FMath::Clamp(static_cast<float>((GetWorld()->GetRealTimeSeconds() - MoveTime) / .14), 0.f, 1.f);
-    const FVector2D Motion = FVector2D(Facing) * (1.f - FMath::InterpEaseOut(0.f, 1.f, Progress, 2.f));
-    Courtyard->Present(Board.Level, Board.State, Motion, MovedBattery, Facing, Progress,
+        : FMath::Clamp(static_cast<float>((Now - MoveTime) / Duration), 0.f, 1.f);
+    const float Remaining = 1.f - FMath::InterpEaseOut(0.f, 1.f, Progress, 2.f);
+    const FVector2D Motion = FVector2D(Facing) * Remaining;
+    Courtyard->Present(Board.Level, Board.State, Motion, FVector2D(BatteryTravel) * Remaining,
+        MovedBattery, Facing, Progress, Now - ExchangeTime < .38,
         Viewport, Origin + FVector2D(418, 420) * Scale, Scale, false);
 }
 
@@ -335,6 +346,16 @@ void AVaultHUD::DrawTile(EVaultTile Tile, float X, float Y, float S, bool bPower
             }
         }
         break;
+    case EVaultTile::Water:
+        Rect(X, Y, S - 1, S - 1, Ink(0x194859));
+        Rect(X + S * .15f, Y + S * .33f, S * .62f, S * .08f, Ocean);
+        Rect(X + S * .31f, Y + S * .59f, S * .55f, S * .08f, Ink(0x569f9f));
+        break;
+    case EVaultTile::Mirror:
+        Rect(X + S * .17f, Y + S * .17f, S * .66f, S * .66f, Ink(0x4a436a));
+        Frame(X + S * .23f, Y + S * .23f, S * .54f, S * .54f, Ink(0xc8a3ff), S * .05f);
+        Rect(X + S * .44f, Y + S * .31f, S * .10f, S * .37f, Ink(0xc8a3ff));
+        break;
     case EVaultTile::Floor:
         Rect(X + S * 0.48f, Y + S * 0.48f, S * 0.04f, S * 0.04f, Stroke);
         break;
@@ -387,6 +408,32 @@ void AVaultHUD::Label(const FString& Value, float X, float Y, float Height, FLin
     const float TextScale = Height * Scale / FMath::Max(1.f, Font->GetMaxCharHeight());
     Item.Scale = FVector2D(TextScale, TextScale);
     Canvas->DrawItem(Item);
+}
+
+void AVaultHUD::Paragraph(const FString& Value, float X, float Y, float Width, float Height, FLinearColor Color)
+{
+    UFont* Font = GEngine->GetMediumFont();
+    const float FontScale = Height / FMath::Max(1.f, Font->GetMaxCharHeight());
+    TArray<FString> Words;
+    Value.ParseIntoArrayWS(Words);
+    FString Line;
+    for (const FString& Word : Words)
+    {
+        const FString Candidate = Line.IsEmpty() ? Word : Line + TEXT(" ") + Word;
+        float MeasuredWidth, MeasuredHeight;
+        GetTextSize(Candidate, MeasuredWidth, MeasuredHeight, Font, FontScale);
+        if (MeasuredWidth > Width && !Line.IsEmpty())
+        {
+            Label(Line, X, Y, Height, Color);
+            Y += Height * 1.16f;
+            Line = Word;
+        }
+        else
+        {
+            Line = Candidate;
+        }
+    }
+    Label(Line, X, Y, Height, Color);
 }
 
 void AVaultHUD::Button(const FString& Value, float X, float Y, float W, float H, EAction Action,

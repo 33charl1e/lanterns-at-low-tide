@@ -19,17 +19,15 @@ bool AVaultHUD::HandleInput(FKey Key, EInputEvent Event)
     if (Screen == EScreen::Play && Direction != FIntPoint::ZeroValue)
     {
         const FIntPoint OldRobot = Board.State.Player;
-        const bool bPush = Board.State.Batteries.Contains(OldRobot + Direction);
-        if (Board.Move(Direction))
+        FIntPoint Landing;
+        if (Board.Move(Direction, &Landing))
         {
             Facing = Direction;
             PrevRobot = OldRobot;
             MoveTime = GetWorld()->GetRealTimeSeconds();
-            MovedBattery = bPush ? Board.State.Player + Direction : FIntPoint(-1, -1);
-            if (Stage != INDEX_NONE && Board.IsComplete())
-            {
-                Cleared[Stage] = true;
-            }
+            MovedBattery = Landing;
+            BatteryTravel = Landing.X == INDEX_NONE ? FIntPoint::ZeroValue : Landing - Board.State.Player;
+            RegisterClear();
         }
         return true;
     }
@@ -89,12 +87,25 @@ bool AVaultHUD::HandleInput(FKey Key, EInputEvent Event)
         Perform(EAction::Undo);
         return true;
     }
+    if (Key == EKeys::Q && Screen == EScreen::Play && Board.Level.Tiles.Contains(EVaultTile::Mirror))
+    {
+        Perform(EAction::Exchange);
+        return true;
+    }
     if (Key == EKeys::R && Screen == EScreen::Play)
     {
         Perform(EAction::Reset);
         return true;
     }
     return false;
+}
+
+void AVaultHUD::RegisterClear()
+{
+    if (Stage != INDEX_NONE && Board.IsComplete())
+    {
+        Cleared.Add(Stage);
+    }
 }
 
 void AVaultHUD::ChangeScreen(EScreen Next)
@@ -112,7 +123,7 @@ void AVaultHUD::ChangeScreen(EScreen Next)
     }
     else
     {
-        Courtyard->Build(FVaultLevel::Campaign()[2], 0);
+        Courtyard->Build(FVaultLevel::Campaign().Last(), 0);
     }
 }
 
@@ -121,6 +132,7 @@ void AVaultHUD::BeginLevel(const FVaultLevel& Level, int32 CampaignIndex, bool b
     Board.Start(Level);
     Stage = CampaignIndex;
     bTesting = bPlaytest;
+    ExchangeTime = -100;
     Facing = { 0, 1 };
     PrevRobot = { -1, -1 };
     ChangeScreen(EScreen::Play);
@@ -152,10 +164,19 @@ void AVaultHUD::Perform(EAction Action, int32 Value)
     case EAction::Back:
         ChangeScreen(Screen == EScreen::Play && bTesting ? EScreen::Workshop : EScreen::Dispatch);
         break;
+    case EAction::Exchange:
+        if (Board.Exchange())
+        {
+            PrevRobot = { INDEX_NONE, INDEX_NONE };
+            ExchangeTime = GetWorld()->GetRealTimeSeconds();
+            RegisterClear();
+        }
+        break;
     case EAction::Undo:
         if (Screen == EScreen::Play)
         {
             Board.Undo();
+            ExchangeTime = -100;
             PrevRobot = { -1, -1 };
         }
         else if (Screen == EScreen::Workshop && !DraftHistory.IsEmpty())
@@ -166,6 +187,7 @@ void AVaultHUD::Perform(EAction Action, int32 Value)
         break;
     case EAction::Reset:
         Board.Reset();
+        ExchangeTime = -100;
         PrevRobot = { -1, -1 };
         Facing = { 0, 1 };
         break;
@@ -201,7 +223,7 @@ void AVaultHUD::Perform(EAction Action, int32 Value)
         {
             FVaultLevel Level = Draft;
             Level.Title = TEXT("Workshop draft");
-            Level.Hint = TEXT("Bring every core to a socket.");
+            Level.Hint = TEXT("Bring every lantern to a beacon.");
             BeginLevel(Level, INDEX_NONE, true);
         }
         else if (Draft.Save(Slot))
@@ -287,18 +309,18 @@ void AVaultHUD::Paint(FVector2D Position, bool bErase)
     }
     else if (Tool == ETool::Battery)
     {
-        if (Tile == EVaultTile::Wall || Edit.Start == Cell)
+        if (Tile == EVaultTile::Wall || Tile == EVaultTile::Water || Edit.Start == Cell)
         {
-            SetNotice(TEXT("Choose a free tile for the battery."), true);
+            SetNotice(TEXT("Place the lantern on dry ground."), true);
             return;
         }
         Edit.Batteries.Add(Cell);
     }
     else if (Tool == ETool::Robot)
     {
-        if (Tile == EVaultTile::Wall || Edit.Batteries.Contains(Cell))
+        if (Tile == EVaultTile::Wall || Tile == EVaultTile::Water || Edit.Batteries.Contains(Cell))
         {
-            SetNotice(TEXT("Choose a free tile for the robot."), true);
+            SetNotice(TEXT("Place Mara on free, dry ground."), true);
             return;
         }
         Edit.Start = Cell;
@@ -306,7 +328,7 @@ void AVaultHUD::Paint(FVector2D Position, bool bErase)
     else
     {
         Tile = static_cast<EVaultTile>(Tool);
-        if (Tile == EVaultTile::Wall)
+        if (Tile == EVaultTile::Wall || Tile == EVaultTile::Water)
         {
             Edit.Batteries.Remove(Cell);
             if (Edit.Start == Cell) { Edit.Start = { -1, -1 }; }

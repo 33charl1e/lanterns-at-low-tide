@@ -18,8 +18,8 @@ public:
     AVaultCourtyard();
 
     void Build(const FVaultLevel& Level, int32 Sector);
-    void Present(const FVaultLevel& Level, const FVaultState& State, FVector2D Motion,
-        FIntPoint MovingBattery, FIntPoint Facing, float Step, FVector2D Viewport,
+    void Present(const FVaultLevel& Level, const FVaultState& State, FVector2D Motion, FVector2D BatteryMotion,
+        FIntPoint MovingBattery, FIntPoint Facing, float Step, bool bMirrorFlash, FVector2D Viewport,
         FVector2D BoardCenter, float UiScale, bool bTitle);
     void Hide();
 
