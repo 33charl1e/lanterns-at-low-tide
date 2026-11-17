@@ -6,6 +6,11 @@
 #include "VaultHUD.generated.h"
 
 class AVaultCourtyard;
+class UTexture2D;
+class UGameViewportClient;
+class STideJournalText;
+struct FCompositeFont;
+struct FSlateFontInfo;
 
 UCLASS()
 class AVaultHUD : public AHUD
@@ -13,8 +18,10 @@ class AVaultHUD : public AHUD
     GENERATED_BODY()
 
 public:
+    AVaultHUD();
     virtual void BeginPlay() override;
     virtual void DrawHUD() override;
+    virtual void EndPlay(const EEndPlayReason::Type Reason) override;
     bool HandleInput(FKey Key, EInputEvent Event);
 
 private:
@@ -36,6 +43,11 @@ private:
     EScreen Screen = EScreen::Dispatch;
     FVaultBoard Board;
     UPROPERTY() TObjectPtr<AVaultCourtyard> Courtyard;
+    UPROPERTY() TObjectPtr<UTexture2D> JournalPaper;
+    TWeakObjectPtr<UGameViewportClient> JournalViewport;
+    TSharedPtr<STideJournalText> JournalText;
+    TSharedPtr<const FCompositeFont> BodyTypeface;
+    TSharedPtr<const FCompositeFont> TitleTypeface;
     FVaultLevel Draft;
     TArray<FVaultLevel> DraftHistory;
     int32 Stage = 0;
@@ -65,6 +77,15 @@ private:
 
     static FIntPoint DirectionForInput(FKey Key);
     void RegisterClear();
+    void PrepareTypefaces();
+    void BeginJournalTextFrame();
+    void FinishJournalTextFrame();
+    FSlateFontInfo FontAt(float Height, bool bHeading) const;
+    float TextWidth(const FString& Value, float Height, bool bHeading = false) const;
+    void Paper(float X, float Y, float W, float H);
+    void LanternSeal(float X, float Y, float Side);
+    void DrawJournalChrome();
+    void Footnote(const FString& Value);
     void DrawDispatch();
     void DrawPlay();
     void DrawWorkshop();

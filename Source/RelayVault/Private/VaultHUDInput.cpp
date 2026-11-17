@@ -182,7 +182,7 @@ void AVaultHUD::Perform(EAction Action, int32 Value)
         else if (Screen == EScreen::Workshop && !DraftHistory.IsEmpty())
         {
             Draft = DraftHistory.Pop();
-            SetNotice(TEXT("Edit undone."));
+            SetNotice(TEXT("已撤销上一步编辑。"));
         }
         break;
     case EAction::Reset:
@@ -209,7 +209,7 @@ void AVaultHUD::Perform(EAction Action, int32 Value)
         break;
     case EAction::Slot:
         Slot = Value;
-        SetNotice(FString::Printf(TEXT("Slot %d selected."), Slot + 1));
+        SetNotice(FString::Printf(TEXT("已选中存档 %d。"), Slot + 1));
         break;
     case EAction::Save:
     case EAction::Test:
@@ -222,18 +222,18 @@ void AVaultHUD::Perform(EAction Action, int32 Value)
         else if (Action == EAction::Test)
         {
             FVaultLevel Level = Draft;
-            Level.Title = TEXT("Workshop draft");
-            Level.Hint = TEXT("Bring every lantern to a beacon.");
+            Level.Title = TEXT("草稿试玩");
+            Level.Hint = TEXT("把所有灯石推入航标。");
             BeginLevel(Level, INDEX_NONE, true);
         }
         else if (Draft.Save(Slot))
         {
             RefreshSlots();
-            SetNotice(FString::Printf(TEXT("Saved to slot %d."), Slot + 1));
+            SetNotice(FString::Printf(TEXT("已保存到存档 %d。"), Slot + 1));
         }
         else
         {
-            SetNotice(TEXT("Could not write the save file."), true);
+            SetNotice(TEXT("存档写入失败。"), true);
         }
         break;
     }
@@ -244,19 +244,19 @@ void AVaultHUD::Perform(EAction Action, int32 Value)
         {
             RememberDraft();
             Draft = MoveTemp(Level);
-            SetNotice(FString::Printf(TEXT("Loaded slot %d."), Slot + 1));
+            SetNotice(FString::Printf(TEXT("已载入存档 %d。"), Slot + 1));
         }
         else
         {
             RefreshSlots();
-            SetNotice(TEXT("This slot has no usable level."), true);
+            SetNotice(TEXT("此存档没有可用关卡。"), true);
         }
         break;
     }
     case EAction::Clear:
         RememberDraft();
         Draft = FVaultLevel::Blank(Draft.Size);
-        SetNotice(TEXT("Grid cleared. Press Z to undo."));
+        SetNotice(TEXT("棋盘已清空，按 Z 可撤销。"));
         break;
     case EAction::Width:
         Resize(Draft.Size + FIntPoint(Value, 0));
@@ -311,7 +311,7 @@ void AVaultHUD::Paint(FVector2D Position, bool bErase)
     {
         if (Tile == EVaultTile::Wall || Tile == EVaultTile::Water || Edit.Start == Cell)
         {
-            SetNotice(TEXT("Place the lantern on dry ground."), true);
+            SetNotice(TEXT("请将灯石放在干地上。"), true);
             return;
         }
         Edit.Batteries.Add(Cell);
@@ -320,7 +320,7 @@ void AVaultHUD::Paint(FVector2D Position, bool bErase)
     {
         if (Tile == EVaultTile::Wall || Tile == EVaultTile::Water || Edit.Batteries.Contains(Cell))
         {
-            SetNotice(TEXT("Place Mara on free, dry ground."), true);
+            SetNotice(TEXT("请将玛拉放在空着的干地上。"), true);
             return;
         }
         Edit.Start = Cell;
@@ -369,5 +369,5 @@ void AVaultHUD::Resize(FIntPoint NewSize)
     RememberDraft();
     Draft = MoveTemp(Edit);
     bFrameReady = false;
-    SetNotice(TEXT("Grid resized. Press Z to undo."));
+    SetNotice(TEXT("已调整棋盘尺寸，按 Z 可撤销。"));
 }

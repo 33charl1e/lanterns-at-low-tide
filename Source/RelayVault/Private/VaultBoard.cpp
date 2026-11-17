@@ -72,33 +72,33 @@ FString FVaultLevel::Validate() const
     if (Size.X < MinSide || Size.Y < MinSide || Size.X > MaxSide || Size.Y > MaxSide ||
         Tiles.Num() != Size.X * Size.Y)
     {
-        return TEXT("Grid size is invalid.");
+        return TEXT("棋盘尺寸无效。");
     }
     if (!Contains(Start) || TileAt(Start) == EVaultTile::Wall || TileAt(Start) == EVaultTile::Water
         || Batteries.Contains(Start))
     {
-        return TEXT("Place Mara on free, dry ground.");
+        return TEXT("请将玛拉放在空着的干地上。");
     }
     const int32 Sockets = Tiles.FilterByPredicate([](EVaultTile Tile) { return Tile == EVaultTile::Socket; }).Num();
     if (Sockets == 0 || Batteries.Num() != Sockets)
     {
-        return TEXT("Use one beacon per lantern.");
+        return TEXT("航标和灯石必须一一对应。");
     }
     for (FIntPoint Position : Batteries)
     {
         if (!Contains(Position) || TileAt(Position) == EVaultTile::Wall || TileAt(Position) == EVaultTile::Water)
         {
-            return TEXT("Place each lantern on dry ground.");
+            return TEXT("请将灯石放在干地上。");
         }
     }
     if (Tiles.Contains(EVaultTile::Relay) != Tiles.Contains(EVaultTile::Gate))
     {
-        return TEXT("Relays and gates must be used together.");
+        return TEXT("石印和闸门需同时放置。");
     }
     const int32 Mirrors = Tiles.FilterByPredicate([](EVaultTile Tile) { return Tile == EVaultTile::Mirror; }).Num();
     if (Mirrors != 0 && Mirrors != 2)
     {
-        return TEXT("Place exactly two mirrors.");
+        return TEXT("潮镜必须成对放置。");
     }
     return {};
 }
@@ -124,8 +124,8 @@ FVaultLevel FVaultLevel::Blank(FIntPoint Size)
 const TArray<FVaultLevel>& FVaultLevel::Campaign()
 {
 static const TArray<FVaultLevel> Levels = {
-        FromRows(TEXT("The Empty Pier"), TEXT("Seat the lantern where the ferryman left its mark."),
-            TEXT("The ferry bell is silent. Her father's lamp is still here."), {
+        FromRows(TEXT("空码头"), TEXT("把灯石推到父亲留下的蓝色航标上。"),
+            TEXT("渡口迟迟没有铃声。父亲的灯还在码头上。"), {
                 TEXT("########"),
                 TEXT("#......#"),
                 TEXT("#..B.o.#"),
@@ -133,8 +133,8 @@ static const TArray<FVaultLevel> Levels = {
                 TEXT("#......#"),
                 TEXT("########")
             }),
-        FromRows(TEXT("Skipping Light"), TEXT("Push a lantern into water. It lands on the first dry tile."),
-            TEXT("A note in the silt: light can cross where feet cannot."), {
+        FromRows(TEXT("跃水灯"), TEXT("把灯石推入水道，它会沿直线跳到第一格岸上。"),
+            TEXT("泥里的字条写着：脚过不去的地方，灯能过去。"), {
                 TEXT("##########"),
                 TEXT("#........#"),
                 TEXT("#..B~~o..#"),
@@ -142,8 +142,8 @@ static const TArray<FVaultLevel> Levels = {
                 TEXT("#...~~...#"),
                 TEXT("##########")
             }),
-        FromRows(TEXT("The Silver Pair"), TEXT("Push onto a mirror. Press Q on or beside it to exchange what the pair holds."),
-            TEXT("Her father set two silver plates facing across the gap."), {
+        FromRows(TEXT("一对潮镜"), TEXT("把灯石推上潮镜。站在镜上或旁边，按 Q 交换两面镜上的人和物。"),
+            TEXT("父亲把两面银镜隔着缺口摆好，镜面遥遥相望。"), {
                 TEXT("##########"),
                 TEXT("#...#....#"),
                 TEXT("#..m#..o.#"),
@@ -151,8 +151,8 @@ static const TArray<FVaultLevel> Levels = {
                 TEXT("#.P.#....#"),
                 TEXT("##########")
             }),
-        FromRows(TEXT("A Borrowed Flame"), TEXT("A lantern on the gold seal holds the gate open."),
-            TEXT("He kept one light burning so the last passengers could pass."), {
+        FromRows(TEXT("借一盏灯"), TEXT("用灯石压住金色石印，闸门便会降下。"),
+            TEXT("他总留一盏灯，好让最后一批乘客过闸。"), {
                 TEXT("##########"),
                 TEXT("#....#...#"),
                 TEXT("#.p..g.o.#"),
@@ -161,8 +161,8 @@ static const TArray<FVaultLevel> Levels = {
                 TEXT("#...o#...#"),
                 TEXT("##########")
             }),
-        FromRows(TEXT("Across Still Water"), TEXT("Use the channel to send the lantern ahead. Find your own crossing."),
-            TEXT("The tide took the bridge. His marks are on both banks."), {
+        FromRows(TEXT("静水两岸"), TEXT("先让灯石跃过水道，再从陆路绕到对岸。"),
+            TEXT("潮水卷走了桥，可两岸都还留着父亲的记号。"), {
                 TEXT("###########"),
                 TEXT("#...#.....#"),
                 TEXT("#.B.~~....#"),
@@ -171,8 +171,8 @@ static const TArray<FVaultLevel> Levels = {
                 TEXT("#......#..#"),
                 TEXT("###########")
             }),
-        FromRows(TEXT("The Other Shore"), TEXT("Skip the channel, then use the silver pair to reach the far beacon."),
-            TEXT("The route in his notebook ends across the mirror water."), {
+        FromRows(TEXT("镜水彼岸"), TEXT("让灯石越过水道，再用潮镜把它送往更远的航标。"),
+            TEXT("父亲在手记里画的路线，终点在镜水另一边。"), {
                 TEXT("#############"),
                 TEXT("#...#...#...#"),
                 TEXT("#.B.~~m.#.o.#"),
@@ -181,8 +181,8 @@ static const TArray<FVaultLevel> Levels = {
                 TEXT("#.......#...#"),
                 TEXT("#############")
             }),
-        FromRows(TEXT("The Returning Light"), TEXT("Bring both lights home. Keep the causeway open until you can return."),
-            TEXT("One light for the crossing. One light to call the ferry home."), {
+        FromRows(TEXT("归航之灯"), TEXT("点亮两岸的航标。留一盏灯开闸，等走完回程再取回。"),
+            TEXT("一盏灯留给归人，一盏灯唤渡船回家。"), {
                 TEXT("###############"),
                 TEXT("#...##...#....#"),
                 TEXT("#.B.~~m..#..o.#"),
@@ -286,8 +286,8 @@ bool FVaultLevel::Load(int32 Slot, FVaultLevel& OutLevel)
     {
         return false;
     }
-    Level.Title = FString::Printf(TEXT("Workshop slot %d"), Slot + 1);
-    Level.Hint = TEXT("Bring every lantern to a beacon.");
+    Level.Title = FString::Printf(TEXT("自制关卡 %d"), Slot + 1);
+    Level.Hint = TEXT("把所有灯石推入航标。");
     OutLevel = MoveTemp(Level);
     return true;
 }

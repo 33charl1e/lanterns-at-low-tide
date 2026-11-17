@@ -5,3 +5,4 @@
 *.uproject text eol=lf
 *.uasset binary
 *.umap binary
+*.otf binary

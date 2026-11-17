@@ -1,4 +1,4 @@
-# 暮潮引灯人 · Lanterns at Low Tide
+# 暮潮引灯人
 
 渡船迟迟未归，渡工的女儿 Mara 带着父亲留下的灯石走过秋色渡口。她要重新点亮两岸的航标，让渡船找到回家的路。七章的渡口日志伴随谜题推进，最后一盏灯点亮后，水面传来回应的铃声。
 
@@ -26,22 +26,26 @@ $engine = 'D:\Program Files\Epic Games\UE_5.5'
 
 | 章节 | 设计目的 |
 | --- | --- |
-| 1 · The Empty Pier | 学会绕到灯石身后，把灯推入航标。 |
-| 2 · Skipping Light | 从一个基本推灯动作中看到灯越过水道。 |
-| 3 · The Silver Pair | 通过两个隔开的区域，理解潮镜交换的是格子上的内容。 |
-| 4 · A Borrowed Flame | 学会留下一盏灯开闸，并在送完灯后取回它。 |
-| 5 · Across Still Water | 让灯和旅人分头过河，在对岸重合。 |
-| 6 · The Other Shore | 越过水道以后，还要借潮镜把灯送往下一岸。 |
-| 7 · The Returning Light | 同时安排水道落点、潮镜的占位、闸门与回程。 |
+| 1 · 空码头 | 学会绕到灯石身后，把灯推入航标。 |
+| 2 · 跃水灯 | 从一个基本推灯动作中看到灯越过水道。 |
+| 3 · 一对潮镜 | 通过两个隔开的区域，理解潮镜交换的是格子上的内容。 |
+| 4 · 借一盏灯 | 学会留下一盏灯开闸，并在送完灯后取回它。 |
+| 5 · 静水两岸 | 让灯和旅人分头过河，在对岸重合。 |
+| 6 · 镜水彼岸 | 越过水道以后，还要借潮镜把灯送往下一岸。 |
+| 7 · 归航之灯 | 同时安排水道落点、潮镜的占位、闸门与回程。 |
 
 《沉星之序》让不同区域分别建立角色、环境和规则，之后再让本来分开的机制交叉。本 Demo 取了其中的跃水与镜面换位思路，编成一趟渡口故事。前半段先分别教学，后半段让灯石的路线与 Mara 的路线分开，再在结尾汇合。[Arc Games 的区域与机制介绍](https://www.gamespress.com/NEW-EXPLORE-THE-REALM-TRAILER-HIGHLIGHTS-THE-MASSIVE-WORLD-WITHIN-ORDE)
 
 ## 关卡编辑器
 
-- 在主界面按 **E** 或点击 **Open level editor**。选择 **Water** 或 **Mirror** 可以画水道或潮镜。潮镜必须恰好两面，闸门和石印配合使用。旅人和灯石只能放在干地上。
-- 宽、高可设为 5–16 格。点击或拖动绘制，右键擦除，**Z** 撤销编辑。用 **Playtest** 进入 3D 试玩，返回会保留草稿。
-- **Save slot / Load slot** 保存或加载到选定槽位。存档位于 `Saved/VaultLevels/slot-1.json` 至 `slot-3.json`，旧版存档可直接加载。
+- 在主界面按 **E** 或点击 **编辑关卡**。选择 **水道** 或 **潮镜** 可以画水道或潮镜。潮镜必须恰好两面，闸门和石印配合使用。旅人和灯石只能放在干地上。
+- 宽、高可设为 5–16 格。点击或拖动绘制，右键擦除，**Z** 撤销编辑。用 **试玩** 进入 3D 试玩，返回会保留草稿。
+- **保存 / 载入** 保存或加载到选定槽位。存档位于 `Saved/VaultLevels/slot-1.json` 至 `slot-3.json`，旧版存档可直接加载。
 
 ## 工程结构
 
 `VaultBoard.cpp` 定义关卡和共用规则。3D 渡口由 `VaultCourtyard.cpp`、`VaultSurrounds.cpp` 和 `VaultGeometry.cpp` 生成，石材、符文和水面材质可在 `Content/Art/Materials` 编辑。UE 自动化测试 `RelayVault` 回放七章通关路线，验证机关撤销和编辑器存档往返。
+
+## 美术与字体
+
+界面以渡口手记为主题，使用自制纸纹、灯形朱印和青铜色线框。简体中文标题采用 Noto Serif SC，正文采用 Noto Sans SC。开源字体和 SIL Open Font License 随工程放在 `Content/Slate/Fonts`。[Noto 字体项目](https://github.com/notofonts/noto-cjk)
