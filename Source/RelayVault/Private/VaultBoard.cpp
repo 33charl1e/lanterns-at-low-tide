@@ -72,18 +72,18 @@ FString FVaultLevel::Validate() const
     }
     if (!Contains(Start) || TileAt(Start) == EVaultTile::Wall || Batteries.Contains(Start))
     {
-        return TEXT("Place a robot on a free tile.");
+        return TEXT("Place the traveler on a free tile.");
     }
     const int32 Sockets = Tiles.FilterByPredicate([](EVaultTile Tile) { return Tile == EVaultTile::Socket; }).Num();
     if (Sockets == 0 || Batteries.Num() != Sockets)
     {
-        return TEXT("Use one charging socket per battery.");
+        return TEXT("Use one socket per core.");
     }
     for (FIntPoint Position : Batteries)
     {
         if (!Contains(Position) || TileAt(Position) == EVaultTile::Wall)
         {
-            return TEXT("Every battery must be on a walkable tile.");
+            return TEXT("Put each core on a walkable tile.");
         }
     }
     if (Tiles.Contains(EVaultTile::Relay) != Tiles.Contains(EVaultTile::Gate))
@@ -114,7 +114,7 @@ FVaultLevel FVaultLevel::Blank(FIntPoint Size)
 const TArray<FVaultLevel>& FVaultLevel::Campaign()
 {
     static const TArray<FVaultLevel> Levels = {
-        FromRows(TEXT("Receiving Bay"), TEXT("Push the battery onto the charging socket."), {
+        FromRows(TEXT("Outer Terrace"), TEXT("Push the amber core onto the blue socket."), {
             TEXT("########"),
             TEXT("#......#"),
             TEXT("#..B.o.#"),
@@ -122,7 +122,7 @@ const TArray<FVaultLevel>& FVaultLevel::Campaign()
             TEXT("#......#"),
             TEXT("########")
         }),
-        FromRows(TEXT("Cross Traffic"), TEXT("Leave room to stand on the far side of each battery."), {
+        FromRows(TEXT("Twin Sockets"), TEXT("Go around the cores to push them into place."), {
             TEXT("#########"),
             TEXT("#.......#"),
             TEXT("#..#..o.#"),
@@ -131,7 +131,7 @@ const TArray<FVaultLevel>& FVaultLevel::Campaign()
             TEXT("#.......#"),
             TEXT("#########")
         }),
-        FromRows(TEXT("First Current"), TEXT("Park a battery on the striped relay to open the gate."), {
+        FromRows(TEXT("The First Relay"), TEXT("A core on the gold relay opens the gate."), {
             TEXT("##########"),
             TEXT("#....#...#"),
             TEXT("#.p..g.o.#"),
@@ -140,7 +140,7 @@ const TArray<FVaultLevel>& FVaultLevel::Campaign()
             TEXT("#...o#...#"),
             TEXT("##########")
         }),
-        FromRows(TEXT("Borrowed Power"), TEXT("Send one battery through before you reclaim the battery on the relay."), {
+        FromRows(TEXT("Borrowed Light"), TEXT("Send a core through, then reclaim the one powering the relay."), {
             TEXT("###########"),
             TEXT("#......####"),
             TEXT("#.p...g..o#"),
@@ -150,7 +150,7 @@ const TArray<FVaultLevel>& FVaultLevel::Campaign()
             TEXT("#..P.o.####"),
             TEXT("###########")
         }),
-        FromRows(TEXT("Night Shift"), TEXT("The socket across the partition needs two deliveries on one circuit."), {
+        FromRows(TEXT("The Last Crossing"), TEXT("Power the gates for two deliveries, then recover the last core."), {
             TEXT("############"),
             TEXT("#.......####"),
             TEXT("#.p..B.g..o#"),
@@ -254,7 +254,7 @@ bool FVaultLevel::Load(int32 Slot, FVaultLevel& OutLevel)
         return false;
     }
     Level.Title = FString::Printf(TEXT("Workshop slot %d"), Slot + 1);
-    Level.Hint = TEXT("Charge every battery.");
+    Level.Hint = TEXT("Bring every core to a socket.");
     OutLevel = MoveTemp(Level);
     return true;
 }

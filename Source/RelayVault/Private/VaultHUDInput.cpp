@@ -1,6 +1,7 @@
 #include "VaultHUD.h"
 
 #include "Engine/World.h"
+#include "VaultCourtyard.h"
 
 bool AVaultHUD::HandleInput(FKey Key, EInputEvent Event)
 {
@@ -101,6 +102,18 @@ void AVaultHUD::ChangeScreen(EScreen Next)
     Screen = Next;
     bPainting = false;
     bFrameReady = false;
+    if (Next == EScreen::Workshop)
+    {
+        Courtyard->Hide();
+    }
+    else if (Next == EScreen::Play)
+    {
+        Courtyard->Build(Board.Level, FMath::Max(0, Stage));
+    }
+    else
+    {
+        Courtyard->Build(FVaultLevel::Campaign()[2], 0);
+    }
 }
 
 void AVaultHUD::BeginLevel(const FVaultLevel& Level, int32 CampaignIndex, bool bPlaytest)
@@ -188,7 +201,7 @@ void AVaultHUD::Perform(EAction Action, int32 Value)
         {
             FVaultLevel Level = Draft;
             Level.Title = TEXT("Workshop draft");
-            Level.Hint = TEXT("Charge every battery.");
+            Level.Hint = TEXT("Bring every core to a socket.");
             BeginLevel(Level, INDEX_NONE, true);
         }
         else if (Draft.Save(Slot))

@@ -1,9 +1,11 @@
 #include "VaultHUD.h"
 
+#include "Algo/AnyOf.h"
 #include "CanvasItem.h"
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
 #include "Engine/Font.h"
+#include "VaultCourtyard.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 
@@ -17,13 +19,13 @@ namespace
         return FLinearColor(FColor((RGB >> 16) & 255, (RGB >> 8) & 255, RGB & 255));
     }
 
-    const FLinearColor Background = Ink(0x101719);
-    const FLinearColor Panel = Ink(0x1a2427);
+    const FLinearColor Background = Ink(0x151b1a);
+    const FLinearColor Panel = Ink(0x1e2520);
     const FLinearColor BoardBack = Ink(0x111b1e);
-    const FLinearColor Stroke = Ink(0x35474a);
-    const FLinearColor Text = Ink(0xf2f3df);
-    const FLinearColor Muted = Ink(0xa6b9b4);
-    const FLinearColor Mint = Ink(0xbeef7a);
+    const FLinearColor Stroke = Ink(0x4b574b);
+    const FLinearColor Text = Ink(0xfff2d9);
+    const FLinearColor Muted = Ink(0xc5c9ae);
+    const FLinearColor Mint = Ink(0xe7bd78);
     const FLinearColor Amber = Ink(0xffbd6b);
     const FLinearColor Ocean = Ink(0x80dad6);
 
@@ -46,6 +48,8 @@ void AVaultHUD::BeginPlay()
     Super::BeginPlay();
     Draft = FVaultLevel::Blank({ 10, 8 });
     RefreshSlots();
+    Courtyard = GetWorld()->SpawnActor<AVaultCourtyard>();
+    Courtyard->Build(FVaultLevel::Campaign()[2], 0);
 }
 
 void AVaultHUD::RefreshSlots()
@@ -81,7 +85,18 @@ void AVaultHUD::DrawHUD()
         }
     }
 
-    DrawRect(Background, 0, 0, Canvas->SizeX, Canvas->SizeY);
+    if (Screen == EScreen::Workshop)
+    {
+        DrawRect(Background, 0, 0, Canvas->SizeX, Canvas->SizeY);
+    }
+    else
+    {
+        PresentCourtyard();
+        const FLinearColor Shade(Background.R, Background.G, Background.B, .96f);
+        DrawRect(Shade, 0, 0, Canvas->SizeX, Origin.Y + 103 * Scale);
+        const float FooterY = Origin.Y + 725 * Scale;
+        DrawRect(Shade, 0, FooterY, Canvas->SizeX, Canvas->SizeY - FooterY);
+    }
     Rect(50, 49, 30, 30, Mint);
     Rect(57, 56, 5, 16, Background);
     Rect(65, 56, 8, 5, Background);
@@ -102,15 +117,12 @@ void AVaultHUD::DrawHUD()
 void AVaultHUD::DrawDispatch()
 {
     const TArray<FVaultLevel>& Levels = FVaultLevel::Campaign();
-    Label(TEXT("Battery dispatch"), 52, 137, 57, Text, true);
-    Label(TEXT("A crate opens the gate. Every crate must come home."), 54, 210, 23, Muted);
-
-    Rect(52, 274, 665, 414, Panel);
-    Frame(52, 274, 665, 414, Stroke);
-    const FVaultLevel& Preview = Levels[2];
-    FVaultState State{ { 3, 3 }, { { 2, 2 }, { 5, 2 } } };
-    DrawBoard(Preview, State, FBox2D({ 81, 292 }, { 688, 627 }), false, false);
-    Label(TEXT("BATTERY  /  RELAY  /  CHARGING SOCKET"), 77, 643, 19, Ocean);
+    Rect(52, 127, 665, 128, FLinearColor(Background.R, Background.G, Background.B, .90f));
+    Rect(52, 127, 3, 128, Mint);
+    Label(TEXT("The Amber Court"), 73, 139, 51, Text, true);
+    Label(TEXT("Carry the lantern cores. Wake the sleeping gates."), 75, 210, 23, Muted);
+    Rect(737, 117, 492, 592, Panel);
+    Frame(737, 117, 492, 592, Stroke);
 
     Label(TEXT("CAMPAIGN"), 759, 136, 19, Mint);
     for (int32 Index = 0; Index < Levels.Num(); ++Index)
@@ -139,10 +151,6 @@ void AVaultHUD::DrawPlay()
     const bool bHasRelay = Level.Tiles.Contains(EVaultTile::Relay);
     const bool bPowered = Board.IsPowered();
 
-    Rect(51, 132, 752, 577, Panel);
-    Frame(51, 132, 752, 577, Stroke);
-    DrawBoard(Level, State, GameArea, false, true);
-
     Rect(824, 132, 405, 577, Panel);
     Frame(824, 132, 405, 577, Stroke);
     const FString Mode = bTesting ? TEXT("WORKSHOP PLAYTEST")
@@ -164,7 +172,7 @@ void AVaultHUD::DrawPlay()
     if (bComplete)
     {
         Label(TEXT("Sector clear"), 849, 398, 39, Mint, true);
-        Label(TEXT("All batteries have reached a socket."), 849, 456, 20, Text);
+        Label(TEXT("Every core is seated."), 849, 456, 20, Text);
         const bool bHasNext = Stage != INDEX_NONE && FVaultLevel::Campaign().IsValidIndex(Stage + 1);
         Button(bTesting ? TEXT("Return to editor   [Enter]") : (bHasNext ? TEXT("Next sector   [Enter]")
             : TEXT("Return to dispatch   [Enter]")), 849, 507, 355, 47, EAction::Advance, 0, true);
@@ -173,7 +181,7 @@ void AVaultHUD::DrawPlay()
     {
         Rect(849, 380, 355, 41, BoardBack);
         Rect(863, 395, 10, 10, bHasRelay ? (bPowered ? Mint : Amber) : Ocean);
-        Label(bHasRelay ? (bPowered ? TEXT("CIRCUIT LIVE") : TEXT("CIRCUIT OFFLINE")) : TEXT("STANDARD STORAGE"),
+        Label(bHasRelay ? (bPowered ? TEXT("RELAY ACTIVE") : TEXT("RELAY DORMANT")) : TEXT("COURT OF ARRIVAL"),
             886, 391, 17, bHasRelay && bPowered ? Mint : Text);
         FString First = Level.Hint;
         FString Second;
@@ -201,14 +209,14 @@ void AVaultHUD::DrawWorkshop()
 {
     Rect(51, 132, 752, 577, Panel);
     Frame(51, 132, 752, 577, Stroke);
-    DrawBoard(Draft, FVaultState{ Draft.Start, Draft.Batteries }, GameArea, true, false);
+    DrawDraft();
 
     Rect(824, 132, 405, 577, Panel);
     Frame(824, 132, 405, 577, Stroke);
     Label(TEXT("Level workshop"), 849, 150, 37, Text, true);
 
     const TCHAR* Names[] = { TEXT("Floor"), TEXT("Wall"), TEXT("Socket"), TEXT("Relay"),
-        TEXT("Gate"), TEXT("Battery"), TEXT("Robot") };
+        TEXT("Gate"), TEXT("Core"), TEXT("Traveler") };
     for (int32 Index = 0; Index < UE_ARRAY_COUNT(Names); ++Index)
     {
         Button(Names[Index], 849 + (Index % 2) * 180, 212 + (Index / 2) * 39, 171, 33,
@@ -241,59 +249,56 @@ void AVaultHUD::DrawWorkshop()
         52, 746, 18, Muted);
 }
 
-void AVaultHUD::DrawBoard(const FVaultLevel& Level, const FVaultState& State, FBox2D Area, bool bEdit, bool bAnimated)
+void AVaultHUD::PresentCourtyard()
 {
-    const FVector2D AreaSize = Area.GetSize();
-    const float Side = FMath::FloorToFloat(FMath::Min(AreaSize.X / Level.Size.X, AreaSize.Y / Level.Size.Y));
-    const FVector2D Size(Level.Size.X * Side, Level.Size.Y * Side);
-    const FVector2D TopLeft = Area.GetCenter() - Size / 2;
-    if (bEdit)
+    const FVector2D Viewport(Canvas->SizeX, Canvas->SizeY);
+    if (Screen == EScreen::Dispatch)
     {
-        GridOrigin = TopLeft;
-        CellSize = Side;
+        const FVaultLevel& Preview = FVaultLevel::Campaign()[2];
+        const FVaultState State{ {3, 3}, { {2, 2}, {4, 2} } };
+        Courtyard->Present(Preview, State, FVector2D::ZeroVector, NoCell, {0, 1}, 1.f,
+            Viewport, Origin + FVector2D(386, 486) * Scale, Scale, true);
+        return;
     }
 
-    bool bPowered = false;
-    for (FIntPoint Battery : State.Batteries)
-    {
-        bPowered |= Level.TileAt(Battery) == EVaultTile::Relay;
-    }
+    const float Progress = PrevRobot == NoCell ? 1.f
+        : FMath::Clamp(static_cast<float>((GetWorld()->GetRealTimeSeconds() - MoveTime) / .14), 0.f, 1.f);
+    const FVector2D Motion = FVector2D(Facing) * (1.f - FMath::InterpEaseOut(0.f, 1.f, Progress, 2.f));
+    Courtyard->Present(Board.Level, Board.State, Motion, MovedBattery, Facing, Progress,
+        Viewport, Origin + FVector2D(418, 420) * Scale, Scale, false);
+}
 
-    Rect(TopLeft.X - 8, TopLeft.Y - 8, Size.X + 16, Size.Y + 16, BoardBack);
-    Frame(TopLeft.X - 8, TopLeft.Y - 8, Size.X + 16, Size.Y + 16, Stroke);
-    for (int32 Y = 0; Y < Level.Size.Y; ++Y)
+void AVaultHUD::DrawDraft()
+{
+    const FVector2D Area = GameArea.GetSize();
+    CellSize = FMath::FloorToFloat(FMath::Min(Area.X / Draft.Size.X, Area.Y / Draft.Size.Y));
+    const FVector2D Size = FVector2D(Draft.Size) * CellSize;
+    GridOrigin = GameArea.GetCenter() - Size / 2;
+    const bool bPowered = Algo::AnyOf(Draft.Batteries,
+        [this](FIntPoint Battery) { return Draft.TileAt(Battery) == EVaultTile::Relay; });
+
+    Rect(GridOrigin.X - 8, GridOrigin.Y - 8, Size.X + 16, Size.Y + 16, BoardBack);
+    Frame(GridOrigin.X - 8, GridOrigin.Y - 8, Size.X + 16, Size.Y + 16, Stroke);
+    for (int32 Y = 0; Y < Draft.Size.Y; ++Y)
     {
-        for (int32 X = 0; X < Level.Size.X; ++X)
+        for (int32 X = 0; X < Draft.Size.X; ++X)
         {
             const FIntPoint Position(X, Y);
-            const bool bOpen = bPowered || State.Batteries.Contains(Position) || Position == State.Player;
-            DrawTile(Level.TileAt(Position), TopLeft.X + X * Side, TopLeft.Y + Y * Side, Side, bPowered, bOpen);
+            const FVector2D At = GridOrigin + FVector2D(Position) * CellSize;
+            const EVaultTile Tile = Draft.TileAt(Position);
+            const bool bBattery = Draft.Batteries.Contains(Position);
+            DrawTile(Tile, At.X, At.Y, CellSize, bPowered, bPowered || bBattery || Position == Draft.Start);
+            if (bBattery) { DrawBattery(At.X, At.Y, CellSize, Tile); }
+            if (Position == Draft.Start) { DrawRobot(At.X, At.Y, CellSize); }
         }
     }
 
-    const float Progress = bAnimated && PrevRobot != NoCell
-        ? FMath::Clamp(static_cast<float>((GetWorld()->GetRealTimeSeconds() - MoveTime) / 0.11), 0.f, 1.f)
-        : 1.f;
-    const FVector2D Motion = FVector2D(Facing) * Side * (1.f - FMath::InterpEaseOut(0.f, 1.f, Progress, 2.f));
-    for (FIntPoint Battery : State.Batteries)
+    const FVector2D At = (Mouse - GridOrigin) / CellSize;
+    const FIntPoint Hovered(FMath::FloorToInt(At.X), FMath::FloorToInt(At.Y));
+    if (Draft.Contains(Hovered))
     {
-        const FVector2D Position = TopLeft + FVector2D(Battery) * Side
-            - ((bAnimated && Battery == MovedBattery) ? Motion : FVector2D::ZeroVector);
-        DrawBattery(Position.X, Position.Y, Side, Level.TileAt(Battery));
-    }
-    if (Level.Contains(State.Player))
-    {
-        const FVector2D Position = TopLeft + FVector2D(State.Player) * Side - Motion;
-        DrawRobot(Position.X, Position.Y, Side);
-    }
-    if (bEdit)
-    {
-        const FVector2D At = (Mouse - TopLeft) / Side;
-        const FIntPoint Cell(FMath::FloorToInt(At.X), FMath::FloorToInt(At.Y));
-        if (Level.Contains(Cell))
-        {
-            Frame(TopLeft.X + Cell.X * Side, TopLeft.Y + Cell.Y * Side, Side, Side, Mint, 2);
-        }
+        Frame(GridOrigin.X + Hovered.X * CellSize, GridOrigin.Y + Hovered.Y * CellSize,
+            CellSize, CellSize, Mint, 2);
     }
 }
 

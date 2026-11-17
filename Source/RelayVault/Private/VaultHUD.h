@@ -5,6 +5,8 @@
 #include "VaultBoard.h"
 #include "VaultHUD.generated.h"
 
+class AVaultCourtyard;
+
 UCLASS()
 class AVaultHUD : public AHUD
 {
@@ -33,6 +35,7 @@ private:
 
     EScreen Screen = EScreen::Dispatch;
     FVaultBoard Board;
+    UPROPERTY() TObjectPtr<AVaultCourtyard> Courtyard;
     FVaultLevel Draft;
     TArray<FVaultLevel> DraftHistory;
     int32 Stage = 0;
@@ -62,7 +65,8 @@ private:
     void DrawDispatch();
     void DrawPlay();
     void DrawWorkshop();
-    void DrawBoard(const FVaultLevel& Level, const FVaultState& State, FBox2D Area, bool bEdit, bool bAnimated);
+    void DrawDraft();
+    void PresentCourtyard();
     void DrawTile(EVaultTile Tile, float X, float Y, float Side, bool bPowered, bool bGateOpen);
     void DrawBattery(float X, float Y, float Side, EVaultTile Tile);
     void DrawRobot(float X, float Y, float Side);

@@ -3,6 +3,7 @@
   "EngineAssociation": "5.5",
   "Category": "Games",
   "Description": "A circuit-powered Sokoban game and grid level editor.",
+  "Plugins": [ { "Name": "ProceduralMeshComponent", "Enabled": true } ],
   "Modules": [
     { "Name": "RelayVault", "Type": "Runtime", "LoadingPhase": "Default" }
   ]
