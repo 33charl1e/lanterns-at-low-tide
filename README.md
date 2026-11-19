@@ -4,14 +4,14 @@
 
 ## 运行
 
-本工程面向 Windows 和 Unreal Engine **5.5.4**。需要 MSVC v143 和 Windows SDK。克隆后打开 `RelayVault.uproject`，按提示编译，在 Unreal Editor 里点击 **Play**。首页的海岛和渡船在运行时生成。点击 **开始游玩** 打开渡口手记，点击 **退出游戏** 结束游玩。
+本工程面向 Windows 和 Unreal Engine **5.5.4**。需要 MSVC v143 和 Windows SDK。克隆后打开 `Lanterns at Low Tide.uproject`，按提示编译，在 Unreal Editor 里点击 **Play**。首页的海岛和渡船在运行时生成。点击 **开始游玩** 打开渡口手记，点击 **退出游戏** 结束游玩。
 
 如果双击时未找到 UE 5.5，或者需要手动编译，在 PowerShell 中修改第一行的引擎路径，从仓库根目录运行：
 
 ```powershell
 $engine = 'D:\Program Files\Epic Games\UE_5.5'
-& "$engine\Engine\Build\BatchFiles\Build.bat" RelayVaultEditor Win64 Development "-Project=$PWD\RelayVault.uproject" -WaitMutex
-& "$engine\Engine\Binaries\Win64\UnrealEditor.exe" "$PWD\RelayVault.uproject"
+& "$engine\Engine\Build\BatchFiles\Build.bat" RelayVaultEditor Win64 Development "-Project=$PWD\Lanterns at Low Tide.uproject" -WaitMutex
+& "$engine\Engine\Binaries\Win64\UnrealEditor.exe" "$PWD\Lanterns at Low Tide.uproject"
 ```
 
 ## 规则
