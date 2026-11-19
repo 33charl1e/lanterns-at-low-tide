@@ -2,18 +2,6 @@
 
 渡船迟迟未归，渡工的女儿 Mara 带着父亲留下的灯石走过秋色渡口。她要重新点亮两岸的航标，让渡船找到回家的路。七章的渡口日志伴随谜题推进，最后一盏灯点亮后，水面传来回应的铃声。
 
-## 运行
-
-本工程面向 Windows 和 Unreal Engine **5.5.4**。需要 MSVC v143 和 Windows SDK。克隆后打开 `Lanterns at Low Tide.uproject`，按提示编译，在 Unreal Editor 里点击 **Play**。首页的海岛和渡船在运行时生成。点击 **开始游玩** 打开渡口手记，点击 **退出游戏** 结束游玩。
-
-如果双击时未找到 UE 5.5，或者需要手动编译，在 PowerShell 中修改第一行的引擎路径，从仓库根目录运行：
-
-```powershell
-$engine = 'D:\Program Files\Epic Games\UE_5.5'
-& "$engine\Engine\Build\BatchFiles\Build.bat" RelayVaultEditor Win64 Development "-Project=$PWD\Lanterns at Low Tide.uproject" -WaitMutex
-& "$engine\Engine\Binaries\Win64\UnrealEditor.exe" "$PWD\Lanterns at Low Tide.uproject"
-```
-
 ## 规则
 
 - **移动与推灯**　用 **WASD / 方向键**移动，一次推动一盏灯。把所有灯放进蓝色航标石座即可通关。
@@ -44,7 +32,7 @@ $engine = 'D:\Program Files\Epic Games\UE_5.5'
 
 ## 工程结构
 
-`VaultBoard.cpp` 定义关卡和共用规则。3D 渡口由 `VaultCourtyard.cpp`、`VaultSurrounds.cpp` 和 `VaultGeometry.cpp` 生成，石材、符文和水面材质可在 `Content/Art/Materials` 编辑。UE 自动化测试 `RelayVault` 回放七章通关路线，验证机关撤销和编辑器存档往返。
+`VaultBoard.cpp` 定义关卡和共用规则。3D 渡口由 `VaultCourtyard.cpp`、`VaultSurrounds.cpp` 和 `VaultGeometry.cpp` 生成，石材、符文和水面材质可在 `Content/Art/Materials` 编辑。
 
 ## 美术与字体
 
