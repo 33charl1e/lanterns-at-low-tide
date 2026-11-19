@@ -1,5 +1,6 @@
 #include "VaultCourtyard.h"
 
+#include "Engine/World.h"
 #include "Materials/MaterialInterface.h"
 #include "VaultGeometry.h"
 
@@ -225,4 +226,136 @@ void AVaultCourtyard::BuildSurrounds(FIntPoint Size, int32 Sector)
     }
     Land.Apply(*Surrounds, 0, StoneMaterial);
     Lights.Apply(*Surrounds, 1, RuneMaterial);
+}
+
+void AVaultCourtyard::BuildHarbor()
+{
+    InitializeScene();
+    Terrain->SetVisibility(false);
+    Walker->SetVisibility(false);
+    LiveRelays->SetVisibility(false);
+    for (UProceduralMeshComponent* Mesh : Batteries) { Mesh->SetVisibility(false); }
+    for (UProceduralMeshComponent* Mesh : GateBars) { Mesh->SetVisibility(false); }
+    SetActorHiddenInGame(false);
+
+    FMesh Ocean;
+    Ocean.Quad({-18000,-18000,-236}, {18000,-18000,-236}, {18000,18000,-236}, {-18000,18000,-236},
+        FLinearColor::White);
+    Ocean.Apply(*Basin, 0, HarborWaterMaterial ? HarborWaterMaterial.Get() : WaterMaterial.Get());
+
+    FMesh Island, Accents;
+    FRandomStream Random(1831);
+    const FLinearColor Sand = Color(0xa09a6d);
+    const FLinearColor Rock = Color(0x67685b);
+    Island.Beam({0,0,-280}, {0,0,-124}, 472, 508, Rock, 14);
+    Island.Beam({0,0,-124}, {0,0,-72}, 508, 414, Sand, 14);
+    Island.Beam({0,0,-72}, {0,0,-61}, 414, 406, Color(0x746f49), 14);
+    for (int32 Index = 0; Index < 24; ++Index)
+    {
+        const float Angle = Index * (2.f * UE_PI / 24);
+        const FVector Site(FMath::Cos(Angle) * 445, FMath::Sin(Angle) * 445, Random.FRandRange(-201, -153));
+        const float Height = Random.FRandRange(56, 110);
+        Island.Rock(Site, {102,128,Height}, Index % 3 == 0 ? Sand : Rock, Random);
+    }
+
+    Island.Box({8,-42,-48}, {388,425,24}, 15, Color(0x9b9076));
+    for (int32 Row = 0; Row < 5; ++Row)
+    {
+        for (int32 Col = 0; Col < 5; ++Col)
+        {
+            Island.Box({Col * 72. - 137,Row * 76. - 196,-32}, {70,74,14}, 5.5f,
+                Color(Row % 2 == 0 ? 0xc6b792 : 0xac9f80));
+        }
+    }
+    BrokenArch(Island, Accents, {6,-261,-52});
+    for (int32 Col : {-1, 1})
+    {
+        Column(Island, {Col * 152. + 8,-140,-24}, 132, true);
+        Lantern(Island, Accents, {Col * 97. + 8,162,-43});
+    }
+    Island.Box({10,29,-18}, {100,105,21}, 5, Color(0x455c54), Turn(45));
+    Accents.Ring({10,29,-5}, 31, 37, 8, Color(0x58cab4), .12f);
+
+    for (int32 BoardIndex = 0; BoardIndex < 17; ++BoardIndex)
+    {
+        Island.Box({52,190. + 24 * BoardIndex,-57}, {115,22,11}, 2.7f,
+            Color(BoardIndex % 3 == 0 ? 0x9d6e41 : 0x775537));
+        if (BoardIndex % 4 == 0)
+        {
+            for (int32 Side : {-1, 1})
+            {
+                Island.Box({52 + Side * 55.,190. + 24 * BoardIndex,-134}, {15,16,203}, 3, Color(0x644b37));
+            }
+        }
+    }
+
+    Maple(Island, {-233,6,-58}, 236, 0, Random);
+    Maple(Island, {272,-139,-58}, 210, 1, Random);
+    Maple(Island, {245,193,-60}, 186, 2, Random);
+    Maple(Island, {-223,-246,-65}, 151, 1, Random);
+    for (int32 Index = 0; Index < 43; ++Index)
+    {
+        const float Angle = Index * 2.39996f;
+        const FVector Site(FMath::Cos(Angle) * Random.FRandRange(255, 397),
+            FMath::Sin(Angle) * Random.FRandRange(268, 397), -59);
+        Grass(Island, Site, Random.FRandRange(8, 18), 7, Random);
+    }
+
+    Island.Rock({686,-361,-198}, {215,164,143}, Rock, Random);
+    Island.Rock({806,-335,-213}, {128,120,93}, Sand, Random);
+    Maple(Island, {688,-364,-55}, 171, 0, Random);
+    Island.Rock({-680,-303,-221}, {167,126,91}, Rock, Random);
+    Island.Rock({-785,-251,-228}, {101,93,66}, Rock, Random);
+    Lantern(Island, Accents, {-677,-300,-125});
+
+    // Broken crests follow the rocks so the quieter water stays visually separate from the shallows.
+    for (int32 Band = 0; Band < 2; ++Band)
+    {
+        const float Radius = 544 + Band * 48;
+        for (int32 Index = 0; Index < 34; ++Index)
+        {
+            if (Random.FRand() < .43) { continue; }
+            const float Angle = Index * (2.f * UE_PI / 34);
+            const float End = Angle + Random.FRandRange(.04f, .15f);
+            const FVector A(FMath::Cos(Angle), FMath::Sin(Angle), 0);
+            const FVector B(FMath::Cos(End), FMath::Sin(End), 0);
+            const FVector Lift(0,0,-234);
+            Accents.Quad(A * Radius + Lift, A * (Radius + 3) + Lift,
+                B * (Radius + 3) + Lift, B * Radius + Lift, Color(Band ? 0x397777 : 0x529c90));
+        }
+    }
+    Island.Apply(*Surrounds, 0, StoneMaterial);
+    Accents.Apply(*Surrounds, 1, RuneMaterial);
+
+    if (!HarborBoat)
+    {
+        HarborBoat = NewMesh();
+        FMesh Boat, Lamp;
+        const FLinearColor Wood = Color(0x68402c);
+        Boat.Box({0,0,1}, {148,64,29}, 10, Wood);
+        Boat.Box({2,0,18}, {151,61,13}, 7, Color(0xb38658));
+        Boat.Gem({79,0,5}, {32,25,17}, Wood, 4);
+        Boat.Gem({-81,0,6}, {29,24,14}, Wood, 4);
+        Boat.Beam({0,0,15}, {0,0,160}, 4.7f, 3.f, Wood, 6);
+        Boat.Beam({-62,0,52}, {46,0,52}, 3.f, 3.f, Wood, 6);
+        const FLinearColor Cloth = Color(0xe4ba7b);
+        Boat.Triangle({-1,0,153}, {60,1,58}, {-64,2,58}, Cloth);
+        Boat.Triangle({-64,2,58}, {60,1,58}, {-1,0,153}, Cloth);
+        Boat.Box({64,0,29}, {12,13,21}, 2, Wood);
+        Lamp.Gem({64,0,40}, {6,6,11}, Color(0xf2a64c), 4);
+        Boat.Apply(*HarborBoat, 0, StoneMaterial);
+        Lamp.Apply(*HarborBoat, 1, RuneMaterial);
+    }
+    HarborBoat->SetVisibility(true);
+}
+
+void AVaultCourtyard::PresentHarbor(FVector2D Viewport, FVector2D IslandCenter, float UiScale)
+{
+    const float Time = static_cast<float>(GetWorld()->GetTimeSeconds());
+    const float Drift = FMath::Sin(Time * .29f);
+    const float Bob = FMath::Sin(Time * 1.61f);
+    HarborBoat->SetRelativeLocation({-80 + 198 * Drift, 682 + 34 * FMath::Sin(Time * .46f), -228 + 6 * Bob});
+    HarborBoat->SetRelativeRotation(FRotator(1.3f * Bob, -14 + 9 * Drift, 3.f * Bob));
+    const FRotator Angle(-43.f + 1.8f * FMath::Sin(Time * .20f), -81.f + 6.f * Drift, 0);
+    SetView({0,32,-48}, Angle, Viewport, IslandCenter, UiScale * .57f);
 }

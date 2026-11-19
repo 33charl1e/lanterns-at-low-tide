@@ -44,7 +44,7 @@ void AVaultHUD::BeginPlay()
     Draft = FVaultLevel::Blank({ 10, 8 });
     RefreshSlots();
     Courtyard = GetWorld()->SpawnActor<AVaultCourtyard>();
-    Courtyard->Build(FVaultLevel::Campaign().Last(), 0);
+    Courtyard->BuildHarbor();
 }
 
 void AVaultHUD::RefreshSlots()
@@ -81,7 +81,7 @@ void AVaultHUD::DrawHUD()
         }
     }
 
-    if (Screen == EScreen::Workshop)
+    if (Screen == EScreen::Workshop && !bWorkshopPreview)
     {
         DrawRect(Background, 0, 0, Canvas->SizeX, Canvas->SizeY);
     }
@@ -93,6 +93,7 @@ void AVaultHUD::DrawHUD()
 
     switch (Screen)
     {
+    case EScreen::Home: DrawHome(); break;
     case EScreen::Dispatch: DrawDispatch(); break;
     case EScreen::Play: DrawPlay(); break;
     case EScreen::Workshop: DrawWorkshop(); break;
@@ -104,12 +105,24 @@ void AVaultHUD::DrawHUD()
 void AVaultHUD::PresentCourtyard()
 {
     const FVector2D Viewport(Canvas->SizeX, Canvas->SizeY);
+    if (Screen == EScreen::Home)
+    {
+        Courtyard->PresentHarbor(Viewport, Origin + FVector2D(808, 416) * Scale, Scale);
+        return;
+    }
+    if (Screen == EScreen::Workshop)
+    {
+        const FVaultState Preview{ Draft.Start, Draft.Batteries };
+        Courtyard->Present(Draft, Preview, FVector2D::ZeroVector, FVector2D::ZeroVector, NoCell, {0, 1},
+            1.f, false, Viewport, Origin + FVector2D(420, 424) * Scale, Scale, false);
+        return;
+    }
     if (Screen == EScreen::Dispatch)
     {
         const FVaultLevel& Preview = FVaultLevel::Campaign().Last();
         const FVaultState State{ Preview.Start, Preview.Batteries };
         Courtyard->Present(Preview, State, FVector2D::ZeroVector, FVector2D::ZeroVector, NoCell, {0, 1}, 1.f, false,
-            Viewport, Origin + FVector2D(386, 486) * Scale, Scale, true);
+            Viewport, Origin + FVector2D(463, 471) * Scale, Scale, true);
         return;
     }
 

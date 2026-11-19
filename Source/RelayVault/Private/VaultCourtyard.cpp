@@ -83,6 +83,8 @@ AVaultCourtyard::AVaultCourtyard()
     StoneMaterial = Stone.Object;
     RuneMaterial = Rune.Object;
     WaterMaterial = Water.Object;
+    static ConstructorHelpers::FObjectFinder<UMaterialInterface> HarborWater(TEXT("/Game/Art/Materials/M_HarborWater"));
+    HarborWaterMaterial = HarborWater.Object;
 }
 
 UProceduralMeshComponent* AVaultCourtyard::NewMesh(bool bShadows)
@@ -95,7 +97,7 @@ UProceduralMeshComponent* AVaultCourtyard::NewMesh(bool bShadows)
     return Component;
 }
 
-void AVaultCourtyard::Build(const FVaultLevel& Level, int32 Sector)
+void AVaultCourtyard::InitializeScene()
 {
     if (!Camera)
     {
@@ -116,6 +118,16 @@ void AVaultCourtyard::Build(const FVaultLevel& Level, int32 Sector)
         LiveRelays = NewMesh(false);
         BuildWalker();
         Walker->SetRelativeScale3D(FVector(1.15));
+    }
+}
+
+void AVaultCourtyard::Build(const FVaultLevel& Level, int32 Sector)
+{
+    InitializeScene();
+    Terrain->SetVisibility(true);
+    if (HarborBoat)
+    {
+        HarborBoat->SetVisibility(false);
     }
 
     for (UProceduralMeshComponent* Gate : GateBars)
@@ -328,6 +340,7 @@ void AVaultCourtyard::Present(const FVaultLevel& Level, const FVaultState& State
     Frame(Level.Size, Viewport, BoardCenter, UiScale, bTitle);
     const FVector Shift(Motion.X * Cell, Motion.Y * Cell, 0);
     const float Hop = FMath::Sin(Step * UE_PI) * 3.5f;
+    Walker->SetVisibility(Level.Contains(State.Player));
     Walker->SetRelativeLocation(Grid(State.Player) - Shift + FVector(0,0,Hop));
     Walker->SetRelativeRotation(FRotator(0, FMath::RadiansToDegrees(FMath::Atan2(static_cast<float>(Facing.Y), static_cast<float>(Facing.X))), 0));
     if (Terrain->IsMeshSectionVisible(3) != bMirrorFlash)
@@ -344,6 +357,7 @@ void AVaultCourtyard::Present(const FVaultLevel& Level, const FVaultState& State
         const EVaultTile Tile = Level.TileAt(Battery);
         const bool bCharged = Tile == EVaultTile::Socket;
         UProceduralMeshComponent& Mesh = *Batteries[Index++];
+        Mesh.SetVisibility(true);
         Mesh.SetRelativeLocation(Grid(Battery) + (Battery == MovingBattery ? FVector(0,0,CrateHop) - CrateShift : FVector::ZeroVector));
         if (Mesh.IsMeshSectionVisible(2) != bCharged)
         {
@@ -364,29 +378,35 @@ void AVaultCourtyard::Present(const FVaultLevel& Level, const FVaultState& State
         GateBars[Gate]->SetRelativeLocation(GateLocation);
     }
 
-    if (APlayerController* Controller = GetWorld()->GetFirstPlayerController();
-        Controller && Controller->GetViewTarget() != Camera)
-    {
-        Controller->SetViewTarget(Camera);
-    }
 }
 
 void AVaultCourtyard::Frame(FIntPoint Size, FVector2D Viewport, FVector2D BoardCenter, float UiScale, bool bTitle)
 {
     constexpr float Tilt = 50.f;
     const FRotator Angle(-Tilt, -90, 0);
+    const FVector Center = Grid(Size - FIntPoint(1, 1)) * .5;
+    const float FitWidth = bTitle ? 820 : 685;
+    const float FitHeight = bTitle ? 470 : 492;
+    const float PixelsPerUnit = UiScale * FMath::Min(FitWidth / (Size.X * Cell),
+        FitHeight / (Size.Y * Cell * FMath::Sin(FMath::DegreesToRadians(Tilt)) + 45));
+    SetView(Center, Angle, Viewport, BoardCenter, PixelsPerUnit);
+}
+
+void AVaultCourtyard::SetView(FVector Focus, FRotator Angle, FVector2D Viewport, FVector2D ScreenFocus, float PixelsPerUnit)
+{
     const FRotationMatrix Orientation(Angle);
     const FVector Right = Orientation.GetScaledAxis(EAxis::Y);
     const FVector Up = Orientation.GetScaledAxis(EAxis::Z);
     const FVector Forward = Orientation.GetScaledAxis(EAxis::X);
-    const FVector Center = Grid(Size - FIntPoint(1, 1)) * .5;
-    const float FitWidth = bTitle ? 658 : 685;
-    const float FitHeight = bTitle ? 398 : 492;
-    const float PixelsPerUnit = UiScale * FMath::Min(FitWidth / (Size.X * Cell),
-        FitHeight / (Size.Y * Cell * FMath::Sin(FMath::DegreesToRadians(Tilt)) + 45));
     const float UnitsPerPixel = 1 / PixelsPerUnit;
-    const FVector2D Offset = BoardCenter - Viewport * .5;
-    const FVector Target = Center - Right * Offset.X * UnitsPerPixel + Up * Offset.Y * UnitsPerPixel;
+    const FVector2D Offset = ScreenFocus - Viewport * .5;
+    const FVector Target = Focus - Right * Offset.X * UnitsPerPixel + Up * Offset.Y * UnitsPerPixel;
     Camera->GetCameraComponent()->SetOrthoWidth(Viewport.X * UnitsPerPixel);
     Camera->SetActorLocationAndRotation(Target - Forward * 5800.f, Angle);
+    if (APlayerController* Controller = GetWorld()->GetFirstPlayerController();
+        Controller && Controller->GetViewTarget() != Camera)
+    {
+        Controller->SetViewTarget(Camera);
+    }
+
 }

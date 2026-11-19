@@ -1,6 +1,7 @@
 #include "VaultHUD.h"
 
 #include "Engine/World.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "VaultCourtyard.h"
 
 bool AVaultHUD::HandleInput(FKey Key, EInputEvent Event)
@@ -49,7 +50,7 @@ bool AVaultHUD::HandleInput(FKey Key, EInputEvent Event)
                 }
             }
         }
-        if (Screen == EScreen::Workshop)
+        if (Screen == EScreen::Workshop && !bWorkshopPreview)
         {
             bPainting = Key == EKeys::LeftMouseButton;
             bStrokeChanged = false;
@@ -60,7 +61,7 @@ bool AVaultHUD::HandleInput(FKey Key, EInputEvent Event)
     }
     if (Key == EKeys::Escape || Key == EKeys::BackSpace)
     {
-        if (Screen == EScreen::Dispatch)
+        if (Screen == EScreen::Home)
         {
             return false;
         }
@@ -71,6 +72,7 @@ bool AVaultHUD::HandleInput(FKey Key, EInputEvent Event)
     {
         switch (Screen)
         {
+        case EScreen::Home: Perform(EAction::Start); break;
         case EScreen::Dispatch: Perform(EAction::Campaign); break;
         case EScreen::Workshop: Perform(EAction::Test); break;
         case EScreen::Play: Perform(EAction::Advance); break;
@@ -82,7 +84,7 @@ bool AVaultHUD::HandleInput(FKey Key, EInputEvent Event)
         Perform(EAction::Workshop);
         return true;
     }
-    if (Key == EKeys::Z && Screen != EScreen::Dispatch)
+    if (Key == EKeys::Z && (Screen == EScreen::Play || Screen == EScreen::Workshop))
     {
         Perform(EAction::Undo);
         return true;
@@ -113,17 +115,23 @@ void AVaultHUD::ChangeScreen(EScreen Next)
     Screen = Next;
     bPainting = false;
     bFrameReady = false;
-    if (Next == EScreen::Workshop)
+    switch (Next)
     {
-        Courtyard->Hide();
+    case EScreen::Home: Courtyard->BuildHarbor(); break;
+    case EScreen::Workshop:
+        if (bWorkshopPreview) { RefreshWorkshopPreview(); }
+        else { Courtyard->Hide(); }
+        break;
+    case EScreen::Play: Courtyard->Build(Board.Level, FMath::Max(0, Stage)); break;
+    case EScreen::Dispatch: Courtyard->Build(FVaultLevel::Campaign().Last(), 0); break;
     }
-    else if (Next == EScreen::Play)
+}
+
+void AVaultHUD::RefreshWorkshopPreview()
+{
+    if (bWorkshopPreview)
     {
-        Courtyard->Build(Board.Level, FMath::Max(0, Stage));
-    }
-    else
-    {
-        Courtyard->Build(FVaultLevel::Campaign().Last(), 0);
+        Courtyard->Build(Draft, 0);
     }
 }
 
@@ -142,6 +150,16 @@ void AVaultHUD::Perform(EAction Action, int32 Value)
 {
     switch (Action)
     {
+    case EAction::Start:
+        ChangeScreen(EScreen::Dispatch);
+        break;
+    case EAction::Quit:
+        UKismetSystemLibrary::QuitGame(this, GetOwningPlayerController(), EQuitPreference::Quit, false);
+        break;
+    case EAction::TogglePreview:
+        bWorkshopPreview = !bWorkshopPreview;
+        ChangeScreen(EScreen::Workshop);
+        break;
     case EAction::Campaign:
         BeginLevel(FVaultLevel::Campaign()[Value], Value, false);
         break;
@@ -162,7 +180,9 @@ void AVaultHUD::Perform(EAction Action, int32 Value)
         ChangeScreen(EScreen::Workshop);
         break;
     case EAction::Back:
-        ChangeScreen(Screen == EScreen::Play && bTesting ? EScreen::Workshop : EScreen::Dispatch);
+        if (Screen == EScreen::Play && bTesting) { ChangeScreen(EScreen::Workshop); }
+        else if (Screen == EScreen::Dispatch) { ChangeScreen(EScreen::Home); }
+        else { ChangeScreen(EScreen::Dispatch); }
         break;
     case EAction::Exchange:
         if (Board.Exchange())
@@ -182,6 +202,7 @@ void AVaultHUD::Perform(EAction Action, int32 Value)
         else if (Screen == EScreen::Workshop && !DraftHistory.IsEmpty())
         {
             Draft = DraftHistory.Pop();
+            RefreshWorkshopPreview();
             SetNotice(TEXT("已撤销上一步编辑。"));
         }
         break;
@@ -206,6 +227,11 @@ void AVaultHUD::Perform(EAction Action, int32 Value)
         break;
     case EAction::Tool:
         Tool = static_cast<ETool>(Value);
+        if (bWorkshopPreview)
+        {
+            bWorkshopPreview = false;
+            ChangeScreen(EScreen::Workshop);
+        }
         break;
     case EAction::Slot:
         Slot = Value;
@@ -244,6 +270,7 @@ void AVaultHUD::Perform(EAction Action, int32 Value)
         {
             RememberDraft();
             Draft = MoveTemp(Level);
+            RefreshWorkshopPreview();
             SetNotice(FString::Printf(TEXT("已载入存档 %d。"), Slot + 1));
         }
         else
@@ -256,6 +283,7 @@ void AVaultHUD::Perform(EAction Action, int32 Value)
     case EAction::Clear:
         RememberDraft();
         Draft = FVaultLevel::Blank(Draft.Size);
+        RefreshWorkshopPreview();
         SetNotice(TEXT("棋盘已清空，按 Z 可撤销。"));
         break;
     case EAction::Width:
@@ -369,5 +397,6 @@ void AVaultHUD::Resize(FIntPoint NewSize)
     RememberDraft();
     Draft = MoveTemp(Edit);
     bFrameReady = false;
+    RefreshWorkshopPreview();
     SetNotice(TEXT("已调整棋盘尺寸，按 Z 可撤销。"));
 }

@@ -260,7 +260,7 @@ void AVaultHUD::LanternSeal(float X, float Y, float Side)
 
 void AVaultHUD::DrawJournalChrome()
 {
-    if (Screen == EScreen::Dispatch)
+    if (Screen == EScreen::Home)
     {
         return;
     }
@@ -277,46 +277,55 @@ void AVaultHUD::Footnote(const FString& Value)
     Label(Value, 66, 747, 17, Light);
 }
 
+void AVaultHUD::DrawHome()
+{
+    Paper(52, 190, 376, 400);
+    LanternSeal(78, 217, 42);
+    Label(TEXT("暮潮引灯人"), 79, 278, 51, Ink, true);
+    Rect(79, 353, 322, 1, Rule);
+    Paragraph(TEXT("渡船迟迟未归。玛拉带上父亲的灯石，\n沿着手记点亮两岸航标。"),
+        79, 372, 322, 17, FadedInk);
+
+    Button(TEXT("开始游玩"), 79, 459, 322, 44, EAction::Start, 0, true);
+    Button(TEXT("退出游戏"), 79, 516, 322, 40, EAction::Quit);
+}
+
 void AVaultHUD::DrawDispatch()
 {
     const TArray<FVaultLevel>& Levels = FVaultLevel::Campaign();
     const bool bEnding = Cleared.Contains(Levels.Num() - 1);
+    if (bEnding)
+    {
+        Paper(48, 113, 405, 84);
+        Paragraph(TEXT("对岸应了一声铃响，一盏灯慢慢靠近。"), 65, 133, 371, 17, Ink);
+    }
 
-    Paper(49, 43, 653, 167);
-    LanternSeal(69, 63, 53);
-    Label(TEXT("暮潮引灯人"), 140, 56, 49, Ink, true);
-    Rect(73, 127, 603, 1, Rule);
-    Paragraph(bEnding
-        ? TEXT("对岸应了一声铃响。水面上，一盏灯慢慢靠近。")
-        : TEXT("渡船迟迟未归。玛拉带上父亲留下的灯石，\n沿着渡口手记，去点亮两岸的航标。"),
-        74, 140, 603, 20, FadedInk);
-
-    Paper(756, 64, 475, 652);
-    Label(TEXT("渡口手记"), 785, 85, 36, Ink, true);
-    Rect(784, 140, 418, 1, Rule);
+    Paper(934, 112, 296, 549);
+    Label(TEXT("渡口手记"), 956, 132, 29, Ink, true);
+    Rect(956, 178, 252, 1, Rule);
 
     for (int32 Index = 0; Index < Levels.Num(); ++Index)
     {
         const FString Row = FString::Printf(TEXT("%02d    %s"), Index + 1, *Levels[Index].Title);
-        const float Y = 157 + Index * 42;
-        Button(Row, 784, Y, 418, 37, EAction::Campaign, Index, Index == 0);
+        const float Y = 190 + Index * 34;
+        Button(Row, 956, Y, 252, 30, EAction::Campaign, Index, Index == 0);
         if (Cleared.Contains(Index))
         {
-            Label(TEXT("已点亮"), 1112, Y + 8, 16, Index == 0 ? Light : Jade);
+            Label(TEXT("已点亮"), 1151, Y + 5, 15, Index == 0 ? Light : Jade);
         }
     }
 
-    Rect(784, 459, 418, 1, Rule);
-    Button(TEXT("编辑关卡"), 784, 480, 418, 47, EAction::Workshop);
-    Label(TEXT("游玩自制关卡"), 785, 553, 20, Ink, true);
+    Rect(956, 434, 252, 1, Rule);
+    Button(TEXT("编辑关卡"), 956, 445, 252, 36, EAction::Workshop);
+    Label(TEXT("自制关卡"), 956, 494, 18, Ink, true);
     for (int32 Index = 0; Index < UE_ARRAY_COUNT(Slots); ++Index)
     {
         const FString SlotLabel = Slots[Index] ? FString::Printf(TEXT("存档 %d"), Index + 1)
-            : FString::Printf(TEXT("空存档 %d"), Index + 1);
-        Button(SlotLabel,
-            784 + Index * 142, 590, 134, 43, EAction::Custom, Index, false, Slots[Index]);
+            : FString::Printf(TEXT("空档 %d"), Index + 1);
+        Button(SlotLabel, 956 + Index * 85, 527, 82, 32, EAction::Custom, Index, false, Slots[Index]);
     }
-    Footnote(TEXT("回车  开始旅程　　E  编辑关卡"));
+    Button(TEXT("返回首页"), 956, 601, 252, 35, EAction::Back);
+    Footnote(TEXT("回车  第一章　　E  编辑关卡"));
 }
 
 void AVaultHUD::DrawPlay()
@@ -388,9 +397,23 @@ void AVaultHUD::DrawPlay()
 
 void AVaultHUD::DrawWorkshop()
 {
-    Paper(51, 127, 752, 591);
-    Label(TEXT("关卡草图"), 75, 136, 23, Ink, true);
-    DrawDraft();
+    if (bWorkshopPreview)
+    {
+        Paper(51, 126, 164, 48);
+        Label(TEXT("立体预览"), 70, 134, 23, Ink, true);
+    }
+    else
+    {
+        Paper(51, 127, 752, 591);
+        Label(TEXT("关卡草图"), 75, 136, 23, Ink, true);
+        DrawDraft();
+    }
+    if (bWorkshopPreview)
+    {
+        Paper(599, 126, 196, 48);
+    }
+    Button(bWorkshopPreview ? TEXT("返回草图") : TEXT("立体预览"),
+        611, 134, 172, 31, EAction::TogglePreview, 0, bWorkshopPreview);
 
     Paper(824, 96, 405, 622);
     Label(TEXT("关卡编辑"), 849, 114, 33, Ink, true);
@@ -425,7 +448,8 @@ void AVaultHUD::DrawWorkshop()
     Button(TEXT("试玩　[回车]"), 849, 528, 351, 46, EAction::Test, 0, true);
     Paragraph(Notice, 849, 590, 351, 17, bError ? Vermilion : Jade);
     Button(TEXT("返回渡口　[退格]"), 849, 644, 351, 40, EAction::Back);
-    Footnote(TEXT("点击或拖动  绘制　　右键  擦除　　Z  撤销编辑"));
+    Footnote(bWorkshopPreview ? TEXT("选择工具返回草图绘制　　回车  试玩")
+        : TEXT("点击或拖动  绘制　　右键  擦除　　Z  撤销编辑"));
 }
 
 void AVaultHUD::Button(const FString& Value, float X, float Y, float W, float H, EAction Action,

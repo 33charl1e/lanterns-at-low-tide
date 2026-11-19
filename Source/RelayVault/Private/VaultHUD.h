@@ -25,12 +25,15 @@ public:
     bool HandleInput(FKey Key, EInputEvent Event);
 
 private:
-    enum class EScreen : uint8 { Dispatch, Play, Workshop };
+#if WITH_DEV_AUTOMATION_TESTS
+    friend class FVaultWorkshopFlowTest;
+#endif
+    enum class EScreen : uint8 { Home, Dispatch, Play, Workshop };
     enum class ETool : uint8 { Floor, Wall, Socket, Relay, Gate, Water, Mirror, Battery, Robot };
     enum class EAction : uint8
     {
         Campaign, Custom, Workshop, Back, Undo, Reset, Advance, Tool, Slot,
-        Save, Open, Clear, Test, Width, Height, Exchange
+        Save, Open, Clear, Test, Width, Height, Exchange, Start, Quit, TogglePreview
     };
 
     struct FButton
@@ -40,7 +43,7 @@ private:
         int32 Value;
     };
 
-    EScreen Screen = EScreen::Dispatch;
+    EScreen Screen = EScreen::Home;
     FVaultBoard Board;
     UPROPERTY() TObjectPtr<AVaultCourtyard> Courtyard;
     UPROPERTY() TObjectPtr<UTexture2D> JournalPaper;
@@ -53,6 +56,7 @@ private:
     int32 Stage = 0;
     int32 Slot = 0;
     bool bTesting = false;
+    bool bWorkshopPreview = false;
     bool bPainting = false;
     bool bStrokeChanged = false;
     bool bFrameReady = false;
@@ -86,11 +90,13 @@ private:
     void LanternSeal(float X, float Y, float Side);
     void DrawJournalChrome();
     void Footnote(const FString& Value);
+    void DrawHome();
     void DrawDispatch();
     void DrawPlay();
     void DrawWorkshop();
     void DrawDraft();
     void PresentCourtyard();
+    void RefreshWorkshopPreview();
     void DrawTile(EVaultTile Tile, float X, float Y, float Side, bool bPowered, bool bGateOpen);
     void DrawBattery(float X, float Y, float Side, EVaultTile Tile);
     void DrawRobot(float X, float Y, float Side);

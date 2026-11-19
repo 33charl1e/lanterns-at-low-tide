@@ -1,7 +1,12 @@
 #include "VaultBoard.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
+#include "Engine/Engine.h"
+#include "Engine/World.h"
+#include "GameFramework/PlayerController.h"
 #include "HAL/FileManager.h"
+#include "VaultCourtyard.h"
+#include "VaultHUD.h"
 #include "Misc/AutomationTest.h"
 #include "Misc/Paths.h"
 
@@ -11,9 +16,10 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaultCampaignTest, "RelayVault.Board.CampaignA
 bool FVaultCampaignTest::RunTest(const FString& Parameters)
 {
     const TArray<FVaultLevel>& Levels = FVaultLevel::Campaign();
-const TCHAR* Solutions[] = {
+    const TCHAR* Solutions[] = {
         TEXT("LURR"), TEXT("LUR"), TEXT("RUQUQDQU"), TEXT("RDRUULDLURURRRLLLULDDDLDRR"),
-        TEXT("UULDLDRR"), TEXT("LLURRDDDRRRUUQUQDQU"), TEXT("LLURRLDDRLDDRRURRUUQUQDQUQDDDLLDLLUURURD")
+        TEXT("LLURRRLLDDDRLDDRRURRRRUUUUULDRDDLLDDLLULUURDD"), TEXT("LLURRRLLDDRLDDDDRRRRRUUUUUQUQUQDQDLDDLDRDRUUUUQUQDQU"),
+        TEXT("LLURRLDDRRDDLLULURRLDDRRURRRUULQUQUQDQURRDLQLQDQUQRDDDLLLDLLUURURD")
     };
     if (!TestEqual(TEXT("Solution count"), Levels.Num(), static_cast<int32>(UE_ARRAY_COUNT(Solutions))))
     {
@@ -118,6 +124,59 @@ bool FVaultSlotTest::RunTest(const FString& Parameters)
 
     IFileManager::Get().Delete(*Path, false);
     IFileManager::Get().Delete(*(Path + TEXT(".tmp")), false);
+    return true;
+}
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaultWorkshopFlowTest, "RelayVault.Workshop.PreviewAndPlay",
+    EAutomationTestFlags::ClientContext | EAutomationTestFlags::ProductFilter)
+
+bool FVaultWorkshopFlowTest::RunTest(const FString& Parameters)
+{
+    AVaultHUD* HUD = nullptr;
+    for (const FWorldContext& Context : GEngine->GetWorldContexts())
+    {
+        if (UWorld* World = Context.World(); World && World->IsGameWorld())
+        {
+            if (APlayerController* Player = World->GetFirstPlayerController())
+            {
+                HUD = Player->GetHUD<AVaultHUD>();
+                if (HUD) { break; }
+            }
+        }
+    }
+    if (!TestNotNull(TEXT("A standalone preview owns the gameplay HUD"), HUD))
+    {
+        return false;
+    }
+
+    using EScreen = AVaultHUD::EScreen;
+    using EAction = AVaultHUD::EAction;
+    TestTrue(TEXT("Game opens on the home screen"), HUD->Screen == EScreen::Home);
+    HUD->Perform(EAction::Start);
+    TestTrue(TEXT("Start opens chapter selection"), HUD->Screen == EScreen::Dispatch);
+    HUD->Perform(EAction::Workshop);
+    TestTrue(TEXT("Workshop starts in sketch mode"), HUD->Courtyard->IsHidden());
+
+    HUD->Perform(EAction::TogglePreview);
+    TestTrue(TEXT("An incomplete draft can be seen in 3D"), HUD->bWorkshopPreview && !HUD->Courtyard->IsHidden());
+    HUD->Perform(EAction::Test);
+    TestTrue(TEXT("Only playtesting requires a valid draft"), HUD->bError && HUD->Screen == EScreen::Workshop);
+
+    HUD->Draft = FVaultLevel::Campaign()[0];
+    HUD->RefreshWorkshopPreview();
+    HUD->Perform(EAction::Test);
+    TestTrue(TEXT("A valid draft enters the playable scene"), HUD->Screen == EScreen::Play && HUD->bTesting);
+    HUD->HandleInput(EKeys::Left, IE_Pressed);
+    TestEqual(TEXT("A workshop run uses the real puzzle movement"), HUD->Board.State.Moves, 1);
+
+    HUD->Perform(EAction::Back);
+    TestTrue(TEXT("Returning restores the draft's 3D preview"), HUD->Screen == EScreen::Workshop
+        && HUD->bWorkshopPreview && !HUD->Courtyard->IsHidden());
+    TestEqual(TEXT("Playtesting preserves the starting cell"), HUD->Draft.Start, FVaultLevel::Campaign()[0].Start);
+    HUD->Perform(EAction::TogglePreview);
+    TestTrue(TEXT("Returning to the sketch hides the 3D world"), HUD->Courtyard->IsHidden());
+    HUD->Perform(EAction::Back);
+    HUD->Perform(EAction::Back);
+    TestTrue(TEXT("Chapter selection returns to home"), HUD->Screen == EScreen::Home);
     return true;
 }
 #endif

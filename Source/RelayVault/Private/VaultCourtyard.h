@@ -18,6 +18,8 @@ public:
     AVaultCourtyard();
 
     void Build(const FVaultLevel& Level, int32 Sector);
+    void BuildHarbor();
+    void PresentHarbor(FVector2D Viewport, FVector2D IslandCenter, float UiScale);
     void Present(const FVaultLevel& Level, const FVaultState& State, FVector2D Motion, FVector2D BatteryMotion,
         FIntPoint MovingBattery, FIntPoint Facing, float Step, bool bMirrorFlash, FVector2D Viewport,
         FVector2D BoardCenter, float UiScale, bool bTitle);
@@ -31,6 +33,8 @@ private:
     UPROPERTY() TObjectPtr<UMaterialInterface> StoneMaterial;
     UPROPERTY() TObjectPtr<UMaterialInterface> RuneMaterial;
     UPROPERTY() TObjectPtr<UMaterialInterface> WaterMaterial;
+    UPROPERTY() TObjectPtr<UMaterialInterface> HarborWaterMaterial;
+    UPROPERTY() TObjectPtr<UProceduralMeshComponent> HarborBoat;
     UPROPERTY() TObjectPtr<UProceduralMeshComponent> Terrain;
     UPROPERTY() TObjectPtr<UProceduralMeshComponent> Surrounds;
     UPROPERTY() TObjectPtr<UProceduralMeshComponent> Basin;
@@ -40,6 +44,8 @@ private:
     UPROPERTY() TArray<TObjectPtr<UProceduralMeshComponent>> GateBars;
     TArray<FIntPoint> GateCells;
 
+    void InitializeScene();
+    void SetView(FVector Focus, FRotator Angle, FVector2D Viewport, FVector2D ScreenFocus, float PixelsPerUnit);
     UProceduralMeshComponent* NewMesh(bool bShadows = true);
     void BuildBoard(const FVaultLevel& Level, int32 Sector);
     void BuildSurrounds(FIntPoint Size, int32 Sector);
